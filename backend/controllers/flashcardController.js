@@ -1,5 +1,8 @@
 const prisma = require('../db');
 
+// dificulty of the flashcard 
+const difficulty = ['EASY', 'MEDIUM', 'HARD'];
+
 // Fetch all flashcards
 exports.getAllFlashcards = async (req, res) => {
     try {
@@ -9,6 +12,41 @@ exports.getAllFlashcards = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+//Get a flashcard set by ID
+exports.getFlashcardSetbyID = async (req,res) => {
+    const {setID} = req.params;
+
+    try{
+        const flashcardSet = await prisma.flashcardSet.findUnique({
+            where: { id: parseInt(setID)},
+            include: {
+                cards: true,
+                comments: {
+                    include: {
+                        author: true,
+                    },
+                },
+            },
+        });
+
+        // If flashcard set not found using the ID provided, error message shown to user
+        if (!flashcardSet)
+        {
+            return res.status(404).json({
+                message: 'Flashcard set with ID ${setID} was not found',
+            });
+        }
+
+        // If ID relates to set, return the flashcard set
+        res.status(200).json(flashcardSet);
+    }
+    catch (error){
+        //handles errors 
+        //returns 500 response with error message
+        res.status(500).json({error: error.message})
+    }
+}
 
 // Create a new flashcard
 exports.createFlashcard = async (req, res) => {

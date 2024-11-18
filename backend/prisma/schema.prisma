@@ -14,12 +14,43 @@ datasource db {
 }
 
 model Flashcard {
-  id        Int      @id @default(autoincrement())
-  question  String   @unique
-  answer    String
-  hidden    Boolean  @default(false)
-  rating    Int      @default(0)
-  createdAt DateTime @default(now())
+  id         Int            @id @default(autoincrement())
+  question   String   
+  answer     String
+  hidden     Boolean        @default(false)
+  rating     Int            @default(0)
+  createdAt  DateTime       @default(now())
+  difficulty String
+  set        FlashcardSet?  @relation(fields: [setId], references: [id])
+  setId      Int?
+}
+
+model FlashcardSet {
+  id         Int         @id @default(autoincrement())
+  name       String
+  cards      Flashcard[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  comments   Comment[]
+  collection Collection[]
+}
+
+model Collection {
+  id         Int            @id @default(autoincrement())
+  comment    String  
+  set        FlashcardSet   @relation(fields: [setId], references: [id])
+  setId      Int
+  author     User           @relation(fields: [authorId], references: [id])
+  authorId   Int
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  username   String    @unique
+  admin      Boolean?  @default(false)
+  comments   Comment[]
+  collection Collection[]
+
 }
 
 model Settings {
@@ -27,3 +58,15 @@ model Settings {
   dailyLimit Int     @default(20)
   
 }
+
+model Comment {
+  id         Int            @id @default(autoincrement())
+  comment    String 
+  set        FlashcardSet?   @relation(fields: [setId], references: [id])
+  setId      Int?
+  author     User?          @relation(fields: [authorId], references: [id])
+  authorId   Int?
+}
+
+
+

@@ -7,6 +7,9 @@ const controller = require('../controllers/flashcardController');
 //Route to fetch ALL flashcards
 router.get('/', flashcardController.getAllFlashcards);
 
+//Route to get a flashcard set by ID
+router.get('/:setId', flashcardController.getFlashcardSetByID)
+
 //Route to create a new flashcard
 router.post('/', flashcardController.createFlashcard);
 
