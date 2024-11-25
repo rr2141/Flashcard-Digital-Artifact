@@ -21,8 +21,8 @@ model Flashcard {
   rating     Int            @default(0)
   createdAt  DateTime       @default(now())
   difficulty String
-  set        FlashcardSet?  @relation(fields: [setId], references: [id])
-  setId      Int?
+  set        FlashcardSet  @relation(fields: [setId], references: [id])
+  setId      Int
 }
 
 model FlashcardSet {
@@ -47,6 +47,7 @@ model Collection {
 model User {
   id         Int       @id @default(autoincrement())
   username   String    @unique
+  password   String
   admin      Boolean?  @default(false)
   comments   Comment[]
   collection Collection[]
