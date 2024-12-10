@@ -1,0 +1,16 @@
+
+// Middleware to check if the user is an admin
+const isAdmin = (req, res, next) => {
+    console.log(req.user)
+    //See if user is logged in
+    if (!req.user) {
+        return res.status(401).json({ error: 'User not authenticated' }); 
+    }
+    if(req.user.admin) {
+        console.log(req.user)
+        next() 
+    }
+    return res.status(403).json({ error: 'User is not an admin' })
+};
+
+module.exports = { isAdmin };

@@ -1,25 +1,31 @@
+// In your main Express app (e.g., app.js)
 const express = require('express');
+require('dotenv').config();  // Load environment variables from .env file
+
+const cors = require('cors');
 const app = express();
+const flashcardRoutes = require("./routes/flashcards"); // Correct path to your routes file
+const userRoutes = require("./routes/users")
+const adminRoutes = require("./routes/admins")
 
-require('dotenv').config();  // Load environment variables
-
-// Import routes
-const flashcardRoutes = require('./routes/flashcards');
-const usersRouter = require('./routes/users');
+// Enable CORS if the frontend and backend are on different ports
+app.use(cors({
+    origin: 'http://localhost:3002',  // Change to your frontend URL
+    methods: 'GET,POST,PUT,DELETE',
+    allowedHeaders: 'Content-Type,Authorization',
+  }));
 
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Apply routes
-app.use('/flashcard-sets', flashcardRoutes);
-app.use('/users', usersRouter);
+// Apply the flashcard routes
+app.use('/api/flashcards', flashcardRoutes); // Prefix the routes with /api
+app.use('/api/users',userRoutes);
+app.use('/api/admins',adminRoutes);
 
-// Export app for testing
-if (process.env.NODE_ENV !== 'test') {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
-    });
-}
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
 
-module.exports = app;

@@ -14,60 +14,60 @@ datasource db {
 }
 
 model Flashcard {
-  id         Int            @id @default(autoincrement())
-  question   String   
+  id         Int          @id @default(autoincrement())
+  question   String
   answer     String
-  hidden     Boolean        @default(false)
-  rating     Int            @default(0)
-  createdAt  DateTime       @default(now())
+  hidden     Boolean      @default(false)
+  rating     Int          @default(0)
+  createdAt  DateTime     @default(now())
   difficulty String
-  set        FlashcardSet  @relation(fields: [setId], references: [id])
+  set        FlashcardSet @relation(fields: [setId], references: [id])
   setId      Int
+  userId     Int? // Make nullable
+  user       User?        @relation(fields: [userId], references: [id]) // Allow null userId initially
 }
 
 model FlashcardSet {
-  id         Int         @id @default(autoincrement())
-  name       String
-  cards      Flashcard[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  comments   Comment[]
-  collection Collection[]
+  id          Int          @id @default(autoincrement())
+  name        String
+  cards       Flashcard[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  comments    Comment[]
+  collections Collection[] @relation("CollectionSets") // Correct relation here
+  User        User?        @relation(fields: [userId], references: [id])
+  userId      Int?
 }
 
 model Collection {
-  id         Int            @id @default(autoincrement())
-  comment    String  
-  set        FlashcardSet   @relation(fields: [setId], references: [id])
-  setId      Int
-  author     User           @relation(fields: [authorId], references: [id])
-  authorId   Int
+  id            Int            @id @default(autoincrement())
+  comment       String
+  flashcardSets FlashcardSet[] @relation("CollectionSets") // The relation name must match
+  userId        Int
+  user          User           @relation(fields: [userId], references: [id])
 }
 
 model User {
-  id         Int       @id @default(autoincrement())
-  username   String    @unique
-  password   String
-  admin      Boolean?  @default(false)
-  comments   Comment[]
-  collection Collection[]
-
+  id            Int            @id @default(autoincrement())
+  username      String         @unique
+  password      String
+  admin         Boolean?       @default(false)
+  comments      Comment[]
+  collections   Collection[]
+  flashcardSets FlashcardSet[]
+  flashcards    Flashcard[] 
 }
 
 model Settings {
-  id         Int     @id @default(autoincrement())
-  dailyLimit Int     @default(20)
-  
+  id         Int @id @default(autoincrement())
+  dailyLimit Int @default(20)
 }
 
 model Comment {
-  id         Int            @id @default(autoincrement())
-  comment    String 
-  set        FlashcardSet?   @relation(fields: [setId], references: [id])
-  setId      Int?
-  author     User?          @relation(fields: [authorId], references: [id])
-  authorId   Int?
+  id      Int           @id @default(autoincrement())
+  comment String
+  set     FlashcardSet? @relation(fields: [setId], references: [id])
+  setId   Int
+  user    User          @relation(fields: [userId], references: [id])
+  userId  Int
 }
-
-
-
