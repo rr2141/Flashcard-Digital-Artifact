@@ -48,6 +48,7 @@ const CollectionPage = () => {
   useEffect(() => {
     if (!userId) return;
 
+    //Fetching the user's collections
     const fetchCollections = async () => {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -58,7 +59,7 @@ const CollectionPage = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:3000/api/users/${userId}/collections/users`, {
+        const response = await fetch(`http://localhost:3000/api/collections`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -90,7 +91,7 @@ const CollectionPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/flashcards/getflashcardsets', {
+        const response = await fetch('http://localhost:3000/api/flashcardSets', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -104,13 +105,15 @@ const CollectionPage = () => {
         setSets(data || []);
       } catch (error) {
         console.error('Error fetching flashcard sets:', error.message);
-        alert('Error fetching flashcard sets: ' + error.message);
+        setError('Failed to fetch flashcard sets: ' + error.message);
       }
     };
 
     fetchSets();
   }, []);
 
+  //Creates new collection
+  //Can add mutiple sets
   const handleCreateCollection = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -123,7 +126,7 @@ const CollectionPage = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/users/${userId}/collections`, {
+      const response = await fetch(`http://localhost:3000/api/collections`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,6 +161,7 @@ const CollectionPage = () => {
     setShowForm(false);
   };
 
+  //Deletes Collection
   const handleDeleteCollection = async (collectionId) => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -166,7 +170,7 @@ const CollectionPage = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/users/${userId}/collections/${collectionId}`, {
+      const response = await fetch(`http://localhost:3000/api/collections/${collectionId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -184,18 +188,23 @@ const CollectionPage = () => {
     }
   };
 
+  //Edits the collection
+  //Can change collection name
+  //Can change sets in collection
   const handleEditCollection = (collection) => {
     setEditingCollection(collection);
     setEditedComment(collection.comment);
     setEditedSetIds(collection.flashcardSets.map((set) => set.id));
   };
 
+  //If user cancels editing collection
   const handleCancelEdit = () => {
     setEditingCollection(null);
     setEditedComment('');
     setEditedSetIds([]);
   };
 
+  //Saves the changes made to the collection
   const handleEditCollectionSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -209,7 +218,7 @@ const CollectionPage = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/users/${userId}/collections/${editingCollection.id}`,
+        `http://localhost:3000/api/collections/${editingCollection.id}`,
         {
           method: 'PUT',
           headers: {

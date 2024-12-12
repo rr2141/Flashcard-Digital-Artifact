@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/navigation';
 import Home from './pages/Home';
 import Flashcard from './pages/Flashcard';
@@ -10,15 +9,13 @@ import Collectionpage from './pages/Collection';
 import SignIn from './components/signin';
 import SignUp from './components/signup';
 import AdminDashboard from './pages/AdminDashboard';
+import Settings from './pages/Settings';
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Checks to see if the token is already stored in localStorage
-  // Sets the token if it's found
-  //Checks if user is admin or not
-  // Errors if token not found
+  // Check for existing token and admin status
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
@@ -26,15 +23,15 @@ const App = () => {
       try {
         const decoded = JSON.parse(atob(storedToken.split('.')[1]));
         setIsAdmin(decoded.admin);
-      }
-      catch (error){
+      } catch (error) {
         console.error("Error decoding token: ", error);
       }
     }
   }, []);
 
-  // The Logout function to remove the token and the admin
+  // Logout function
   const handleLogout = () => {
+    console.log('Logout function called'); // Debugging
     localStorage.removeItem('token');  
     setToken(null);  
     setIsAdmin(false); 
@@ -42,7 +39,7 @@ const App = () => {
 
   return (
     <Router>
-      <Navigation username="user" token={token} onLogout={handleLogout} />
+      <Navigation username="user" onLogout={handleLogout} />
       <div className="p-4">
         <Routes>
           {/* Route for Home page */}
@@ -51,13 +48,14 @@ const App = () => {
           {/* Routes for Flashcards and other pages, only accessible if logged in */}
           <Route path="/create" element={token ? <CreateFlashcards /> : <SignIn setToken={setToken} />} />
           <Route path="/my-flashcards" element={token ? <MyFlashcards /> : <SignIn setToken={setToken} />} />
-          <Route path="/Collection" element={token ? <Collectionpage/> : <SignIn setToken={setToken} />} />
-          <Route path="/Flashcard" element={token ? <Flashcard/> : <SignIn setToken={setToken} />} />
+          <Route path="/Collection" element={token ? <Collectionpage /> : <SignIn setToken={setToken} />} />
+          <Route path="/Flashcard" element={token ? <Flashcard set={{ id: 1, name: 'Test Set' }} onBack={() => {}} /> : <SignIn setToken={setToken} />} />
+          <Route path="/Settings" element={token ? <Settings /> : <SignIn setToken={setToken} />} />
          
           {/* Admin Dashboard only accessible if the user is an admin */}
-          <Route path="/AdminDashboard" element={token && isAdmin ? <AdminDashboard /> : <Navigate to="/" />}/>
+          <Route path="/AdminDashboard" element={token && isAdmin ? <AdminDashboard /> : <Navigate to="/AdminDashboard" />} />
           
-           {/* Route for SignUp page */}
+          {/* Route for SignUp page */}
           <Route path="/signup" element={<SignUp />} />
         </Routes>
       </div>

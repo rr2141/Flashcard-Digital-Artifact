@@ -1,8 +1,4 @@
 import React, { useState } from 'react';
-
-// To navigate to the correct page after signing in
-// If it's user, directed to the user page
-// If it's admin, directed to the admin page
 import { useNavigate } from 'react-router-dom';
 
 export default function SignIn({ setToken }) {
@@ -33,23 +29,21 @@ export default function SignIn({ setToken }) {
 
     if (response.ok) {
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setToken(data.token);
 
-      console.log('Login successful, admin status:', data.admin);
-
-      if (data.admin === true) {
+      if (data.user.admin == true) {
         alert('Login successful!');
         navigate('/AdminDashboard');
       } else {
         alert('Login successful!');
-        navigate('/');
+        navigate('/my-flashcards');
       }
     } else {
       alert(`Error: ${data.error}`);
     }
   };
 
-  /* From Tailwind */
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -60,7 +54,6 @@ export default function SignIn({ setToken }) {
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
         <form action="#" method="POST" className="space-y-6" onSubmit={handleLogin}>
-          {/* Username Field */}
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-900">
               Username
@@ -79,7 +72,6 @@ export default function SignIn({ setToken }) {
             </div>
           </div>
 
-          {/* Password Field */}
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor="password" className="block text-sm font-medium text-gray-900">
@@ -105,7 +97,6 @@ export default function SignIn({ setToken }) {
             </div>
           </div>
 
-          {/* Sign In Button */}
           <div>
             <button
               type="submit"
@@ -116,7 +107,6 @@ export default function SignIn({ setToken }) {
           </div>
         </form>
 
-        {/* Sign Up Link */}
         <p className="mt-10 text-center text-sm text-gray-500">
           Don't have an account?{' '}
           <a href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-500">
@@ -127,4 +117,3 @@ export default function SignIn({ setToken }) {
     </div>
   );
 }
-

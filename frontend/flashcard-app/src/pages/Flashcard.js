@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-// Navigate between pages
 import { useNavigate } from 'react-router-dom';
 
 const Flashcard = ({ set, onBack }) => {
@@ -13,7 +12,7 @@ const Flashcard = ({ set, onBack }) => {
     answer: '',
   });
 
-  // Fetches flashcard sets
+  // Fetches flashcards in the set
   useEffect(() => {
     const fetchFlashcards = async () => {
       const token = localStorage.getItem('token');
@@ -24,7 +23,7 @@ const Flashcard = ({ set, onBack }) => {
       }
 
       try {
-        const response = await fetch(`http://localhost:3000/api/flashcards/sets/${set.id}/cards`, {
+        const response = await fetch(`http://localhost:3000/api/flashcards/set/${set.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -35,7 +34,12 @@ const Flashcard = ({ set, onBack }) => {
         }
 
         const data = await response.json();
-        setFlashcards(data);
+        if (data.message) {
+          alert(data.message);
+          navigate('/create', { state: { setId: set.id } });
+        } else {
+          setFlashcards(data || []);
+        }
       } catch (error) {
         console.error('Error fetching flashcards:', error.message);
         alert('Error fetching flashcards: ' + error.message);
@@ -44,14 +48,12 @@ const Flashcard = ({ set, onBack }) => {
     };
 
     fetchFlashcards();
-  }, [set, onBack]);
+  }, [set.id, onBack, navigate]);
 
-  // Directs user to create flashcard page.
   const handleCreateFlashcard = () => {
     navigate('/create', { state: { setId: set.id } });
   };
 
- 
   const handleFlashcardNavigation = (direction) => {
     setFlipped(false);
     if (direction === 'prev') {
@@ -64,14 +66,12 @@ const Flashcard = ({ set, onBack }) => {
     setIsEditing(false);
   };
 
-  // User can edit flashcard, questions and answers can be changed.
   const handleEditFlashcard = () => {
     const flashcard = flashcards[currentFlashcardIndex];
     setEditedFlashcard({ question: flashcard?.question || '', answer: flashcard?.answer || '' });
     setIsEditing(true);
   };
 
-  // Flashcard will be updated with new edits.
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -83,7 +83,7 @@ const Flashcard = ({ set, onBack }) => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/api/flashcards/updates/${flashcardId}`, {
+      const response = await fetch(`http://localhost:3000/api/flashcards/${flashcardId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,6 @@ const Flashcard = ({ set, onBack }) => {
     }
   };
 
-  // Flashcard is deleted.
   const handleDeleteFlashcard = async () => {
     const token = localStorage.getItem('token');
     const flashcardId = flashcards[currentFlashcardIndex]?.id;
@@ -122,7 +121,7 @@ const Flashcard = ({ set, onBack }) => {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/flashcards/delete/${flashcardId}`, {
+      const response = await fetch(`http://localhost:3000/api/flashcards/${flashcardId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -149,7 +148,6 @@ const Flashcard = ({ set, onBack }) => {
     }
   };
 
-  /* From Tailwind */
   return (
     <div className="p-4">
       <button

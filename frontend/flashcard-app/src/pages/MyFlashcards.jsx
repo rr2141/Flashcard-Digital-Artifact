@@ -8,8 +8,8 @@ const FlashcardsPage = () => {
   const [selectedSet, setSelectedSet] = useState(null);
   const [newSetName, setNewSetName] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [recentComments, setRecentComments] = useState({});
 
+  // Fetch flashcard sets on page load
   useEffect(() => {
     const fetchSets = async () => {
       const token = localStorage.getItem('token');
@@ -19,7 +19,7 @@ const FlashcardsPage = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/flashcards/getflashcardsets', {
+        const response = await fetch('http://localhost:3000/api/flashcardSets', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -31,26 +31,8 @@ const FlashcardsPage = () => {
 
         const data = await response.json();
         setSets(data);
-
-        // Fetches the most recent comment for each set
-        const recentCommentsPromises = data.map((set) =>
-          fetch(`http://localhost:3000/api/flashcards/sets/${set.id}/recentComment`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }).then((res) => (res.ok ? res.json() : null))
-        );
-
-        const comments = await Promise.all(recentCommentsPromises);
-        const commentsMap = data.reduce((acc, set, index) => {
-          acc[set.id] = comments[index];
-          return acc;
-        }, {});
-        setRecentComments(commentsMap);
-
       } catch (error) {
-        console.error('Error fetching flashcard sets:', error.message);
-        alert('Error fetching flashcard sets: ' + error.message);
+        alert('Error fetching your flashcard sets. Please try again later!');
       }
     };
 
@@ -62,27 +44,22 @@ const FlashcardsPage = () => {
     setCurrentPage('set');
   };
 
-  // If the "View More" link is pressed, shows all the comments for the set.
-  const handleViewMoreComments = (set) => {
-    setSelectedSet(set);
-    setCurrentPage('comments');
-  };
-
-  // User can add a comment to a set.
+  // Add a new comment to the selected set
   const handleAddNewComment = (setId, addedComment) => {
-    setRecentComments((prevComments) => ({
-      ...prevComments,
-      [setId]: addedComment,
-    }));
+    setSets((prevSets) =>
+      prevSets.map((set) =>
+        set.id === setId ? { ...set, comments: [...set.comments, addedComment] } : set
+      )
+    );
   };
 
-  // Directs back to the flashcard page.
+  // Navigate back to the home page
   const handleBackToHome = () => {
     setCurrentPage('home');
     setSelectedSet(null);
   };
 
-  // User can create a new set.
+  // Create a new flashcard set
   const handleAddSet = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -96,11 +73,11 @@ const FlashcardsPage = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3000/api/flashcards/flashcardsets', {
+      const response = await fetch('http://localhost:3000/api/flashcardSets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ name: newSetName }),
       });
@@ -115,19 +92,17 @@ const FlashcardsPage = () => {
       alert('Flashcard set successfully created!');
       setShowForm(false);
     } catch (error) {
-      console.error('Error creating flashcard set:', error.message);
-      alert('Error creating flashcard set:', error.message);
+      alert('There was a problem creating the flashcard set. Please try again later!');
     }
   };
 
-  // User can cancel creation of flashcard set.
+  // Cancel creating a new flashcard set
   const handleCancelCreate = () => {
     setNewSetName('');
     setShowForm(false);
   };
 
-  // User can delete flashcard set.
-  // User can delete set containing flashcards.
+  // Delete a flashcard set
   const handleDeleteSet = async (setId) => {
     const token = localStorage.getItem('token');
     if (!token || !setId) {
@@ -139,7 +114,7 @@ const FlashcardsPage = () => {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/api/flashcards/deleteSet/${setId}`, {
+      const response = await fetch(`http://localhost:3000/api/flashcardSets/${setId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -158,12 +133,12 @@ const FlashcardsPage = () => {
 
       alert('Flashcard set deleted successfully!');
     } catch (error) {
-      console.error('Error deleting flashcard set:', error);
-      alert('Error deleting flashcard set: ' + error.message);
+      alert('There was a problem deleting the flashcard set. Please try again later!');
     }
   };
 
-  /* From Tailwind */
+  // Ref tailwind
+
   return (
     <div className="p-4">
       {currentPage === 'home' && (
@@ -197,7 +172,7 @@ const FlashcardsPage = () => {
                     </button>
                     <button
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering view action
+                        e.stopPropagation();
                         handleDeleteSet(set.id);
                       }}
                       className="bg-red-200 text-gray-900 py-1 px-3 rounded-md border border-gray-300 hover:bg-red-300"
@@ -217,21 +192,14 @@ const FlashcardsPage = () => {
                   </div>
                 </div>
 
-                {recentComments[set.id] ? (
+                {set.comments && set.comments.length > 0 ? (
                   <div className="mt-4 border-t pt-4">
-                    <div className="text-xs text-gray-500">{recentComments[set.id].date}</div>
-                    <p className="text-sm text-gray-900 line-clamp-2">{recentComments[set.id].comment}</p>
+                    <p className="text-sm text-gray-900 line-clamp-2">{set.comments[0].comment}</p>
                     <div className="flex items-center mt-2">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{recentComments[set.id]?.user?.name}</p>
+                        <p className="text-sm font-semibold text-gray-900">{set.comments[0]?.user?.name}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleViewMoreComments(set)}
-                      className="mt-4 text-blue-500 hover:underline"
-                    >
-                      View More
-                    </button>
                   </div>
                 ) : (
                   <p className="mt-4 text-sm text-gray-500">No comments yet.</p>

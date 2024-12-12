@@ -1,0 +1,1174 @@
+openapi: '3.0.3'
+info:
+  title: Test Var OpenAPI
+  description: API for managing flashcards.
+  version: '1.0'
+servers:
+   - url: http://localhost:3000
+   - url: http://localhost:3003
+
+tags:
+  - name: Users
+    description: Endpoints related to user management
+  - name: Flashcards
+    description: Endpoints related to flashcard operations
+  - name: Collections
+    description: Endpoints related to collection management
+  - name: Admin
+    description: Administrative endpoints
+
+paths:
+  /admin/dashboard:
+    get:
+      summary: Admin Dashboard
+      description: Retrieve data for the admin dashboard.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful retrieval of admin dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SomeModel'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users:
+    get:
+      summary: Get All Users
+      description: Retrieve a list of all users.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{userId}:
+    delete:
+      summary: Delete User by ID
+      description: Delete a user by their ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user to delete
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /collections:
+    get:
+      summary: Get User Collections
+      description: Retrieve all collections for the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of user collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collection'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a Collection
+      description: Create a new collection for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+                - setIds
+              properties:
+                comment:
+                  type: string
+                  example: "My favorite biology sets."
+                setIds:
+                  type: array
+                  items:
+                    type: integer
+                  example: [1, 2, 3]
+      responses:
+        '201':
+          description: Collection created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        '400':
+          description: Comment and at least one setId are required or invalid setIds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /collections/{collectionId}:
+    get:
+      summary: Get Collection by ID
+      description: Retrieve a specific collection by its ID for the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the collection to retrieve
+      responses:
+        '200':
+          description: Collection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        '404':
+          description: Collection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update Collection by ID
+      description: Update a collection's comment and associated flashcard sets.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the collection to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                  example: "Updated comment for my collection."
+                setIds:
+                  type: array
+                  items:
+                    type: integer
+                  example: [2, 3, 4]
+      responses:
+        '200':
+          description: Collection updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        '400':
+          description: Missing comment or invalid setIds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collection not found or user not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Collection by ID
+      description: Delete a collection by its ID for the authenticated user.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the collection to delete
+      responses:
+        '204':
+          description: Collection deleted successfully
+        '404':
+          description: Collection not found or user not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /flashcards:
+    get:
+      summary: Get All Flashcards
+      description: Retrieve all flashcards.
+      responses:
+        '200':
+          description: A list of flashcards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Flashcard'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a Flashcard
+      description: Create a new flashcard.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - setId
+                - question
+                - answer
+                - difficulty
+              properties:
+                setId:
+                  type: integer
+                  example: 1
+                question:
+                  type: string
+                  example: "What is the powerhouse of the cell?"
+                answer:
+                  type: string
+                  example: "Mitochondria"
+                difficulty:
+                  type: string
+                  example: "Easy"
+      responses:
+        '201':
+          description: Flashcard created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flashcard'
+        '400':
+          description: All fields are required or invalid setId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Flashcard set not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flashcards/{id}:
+    put:
+      summary: Update Flashcard by ID
+      description: Update a flashcard's question and answer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+                - answer
+              properties:
+                question:
+                  type: string
+                  example: "What is the largest organ in the human body?"
+                answer:
+                  type: string
+                  example: "Skin"
+      responses:
+        '200':
+          description: Flashcard updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flashcard'
+        '400':
+          description: Invalid input format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Flashcard by ID
+      description: Delete a flashcard by its ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard to delete
+      responses:
+        '204':
+          description: Flashcard deleted successfully
+        '404':
+          description: Flashcard not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flashcardSets/{setId}/flashcards:
+    get:
+      summary: Get Flashcards in a Flashcard Set
+      description: Retrieve all flashcards within a specific flashcard set. Optionally shuffle the flashcards.
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard set to fetch flashcards for
+        - name: shuffle
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Whether to shuffle the flashcards
+      responses:
+        '200':
+          description: A list of flashcards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Flashcard'
+        '404':
+          description: Flashcard set not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /flashcardSets:
+    get:
+      summary: Get All Flashcard Sets
+      description: Retrieve all flashcard sets along with their cards and comments.
+      responses:
+        '200':
+          description: A list of flashcard sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FlashcardSet'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a Flashcard Set
+      description: Create a new flashcard set for the authenticated user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Biology Basics"
+      responses:
+        '201':
+          description: Flashcard set created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlashcardSet'
+        '400':
+          description: Name is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flashcardSets/{setID}:
+    get:
+      summary: Get Flashcard Set by ID
+      description: Retrieve a flashcard set by its ID, including its cards and comments.
+      parameters:
+        - name: setID
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard set to retrieve
+      responses:
+        '200':
+          description: Flashcard set details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlashcardSet'
+        '400':
+          description: Invalid setID provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Flashcard set not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update Flashcard Set by ID
+      description: Update a flashcard set's name and cards.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard set to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - cards
+              properties:
+                name:
+                  type: string
+                  example: "Advanced Biology"
+                cards:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - question
+                      - answer
+                      - difficulty
+                    properties:
+                      question:
+                        type: string
+                        example: "What is the powerhouse of the cell?"
+                      answer:
+                        type: string
+                        example: "Mitochondria"
+                      difficulty:
+                        type: string
+                        example: "Easy"
+      responses:
+        '200':
+          description: Flashcard set updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlashcardSet'
+        '400':
+          description: Name is required or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Flashcard set not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete Flashcard Set by ID
+      description: Delete a flashcard set and its associated cards.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard set to delete
+      responses:
+        '204':
+          description: Flashcard set deleted successfully
+        '404':
+          description: Flashcard set not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /flashcardSets/{setId}/comments:
+    post:
+      summary: Add Comment to Flashcard Set
+      description: Add a comment to a specific flashcard set.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard set to add a comment to
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+              properties:
+                comment:
+                  type: string
+                  example: "This is a great set!"
+      responses:
+        '201':
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: Comment cannot be empty or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Flashcard set not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Get Comments for Flashcard Set
+      description: Retrieve all comments for a specific flashcard set.
+      parameters:
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the flashcard set to fetch comments for
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '404':
+          description: No comments found for this set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /login:
+    post:
+      summary: User Login
+      description: Authenticate a user and return a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "john_doe"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Login successful"
+                  token:
+                    type: string
+                    example: "jwt.token.here"
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      username:
+                        type: string
+                        example: "john_doe"
+                      admin:
+                        type: boolean
+                        example: false
+        '400':
+          description: Missing username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users:
+    post:
+      summary: Create New User
+      description: Register a new user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "john_doe"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123"
+                admin:
+                  type: boolean
+                  example: false
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "User created successfully"
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      username:
+                        type: string
+                        example: "john_doe"
+                      admin:
+                        type: boolean
+                        example: false
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{userId}:
+    get:
+      summary: Get User by ID
+      description: Retrieve user details by their ID.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user to retrieve
+      responses:
+        '200':
+          description: Successful retrieval of user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid user ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update User by ID
+      description: Update user details.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "john_doe_updated"
+                password:
+                  type: string
+                  format: password
+                  example: "NewSecurePass456"
+                admin:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden - Not authorized to update admin status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{userId}/flashcardSets:
+    get:
+      summary: Get User's Flashcard Sets
+      description: Retrieve all flashcard sets associated with a user.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user
+      responses:
+        '200':
+          description: Successful retrieval of flashcard sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FlashcardSet'
+        '400':
+          description: Invalid user ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{userId}/password:
+    put:
+      summary: Update User Password
+      description: Update a user's password.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID of the user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                  example: "OldPass123"
+                newPassword:
+                  type: string
+                  format: password
+                  example: "NewPass456"
+      responses:
+        '200':
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password updated successfully"
+        '400':
+          description: Current password is incorrect or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Collection:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        comment:
+          type: string
+          example: "My favorite biology sets."
+        userId:
+          type: integer
+          example: 1
+        flashcardSets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlashcardSet'
+        user:
+          $ref: '#/components/schemas/User'
+
+    FlashcardSet:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Biology Basics"
+        description:
+          type: string
+          example: "Basic biology flashcards."
+        userId:
+          type: integer
+          example: 1
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flashcard'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+
+    Flashcard:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        setId:
+          type: integer
+          example: 1
+        question:
+          type: string
+          example: "What is the powerhouse of the cell?"
+        answer:
+          type: string
+          example: "Mitochondria"
+        difficulty:
+          type: string
+          example: "Easy"
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        comment:
+          type: string
+          example: "This is a great set!"
+        setId:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-10-05T14:48:00.000Z"
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "john_doe"
+        admin:
+          type: boolean
+          example: false
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Description of the error."

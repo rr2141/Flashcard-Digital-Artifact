@@ -20,21 +20,17 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
+    <>
+      {/* Rest of your Home component JSX */}
       {token ? (
-        <div className="bg-white p-8 rounded shadow-md w-full max-w-sm">
-          <h2 className="text-2xl font-semibold text-center mb-6">Welcome back!</h2>
-          <button
-            onClick={handleLogout}
-            className="w-full py-2 px-4 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Logout
-          </button>
+        <div>
+          <h1>Welcome Back!</h1>
+          {/* Other authenticated content */}
         </div>
       ) : (
         <SignIn setToken={setToken} />
       )}
-    </div>
+    </>
   );
 };
 

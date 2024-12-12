@@ -5,14 +5,17 @@ const CreateFlashcards = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sets, setSets] = useState([]);
-  const [selectedSetId, setSelectedSetId] = useState(''); 
-  const [newSetName, setNewSetName] = useState(''); 
-  const [question, setQuestion] = useState(''); 
-  const [answer, setAnswer] = useState(''); 
-  const [difficulty, setDifficulty] = useState('EASY'); 
+  const [selectedSetId, setSelectedSetId] = useState('');
+  const [newSetName, setNewSetName] = useState('');
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [difficulty, setDifficulty] = useState('EASY');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const preselectedSetId = location.state?.setId || ''; 
-  const [isSetPreselected] = useState(Boolean(preselectedSetId)); 
+  const preselectedSetId = location.state?.setId || '';
+  const [isSetPreselected] = useState(Boolean(preselectedSetId));
 
   useEffect(() => {
     if (preselectedSetId) {
@@ -20,81 +23,61 @@ const CreateFlashcards = () => {
     }
   }, [preselectedSetId]);
 
-  // Fetch all flashcard sets.
   useEffect(() => {
     const fetchSets = async () => {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         alert('You must be logged in to view your flashcard sets');
+        setLoading(false);
         return;
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/flashcards/getflashcardsets', {
+        const response = await fetch('http://localhost:3000/api/flashcardSets', {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch flashcard sets. Status: ${response.status}`);
+          throw new Error('Failed to fetch flashcard sets');
         }
 
         const data = await response.json();
-        setSets(data);
+        setSets(data || []);
       } catch (error) {
         console.error('Error fetching flashcard sets:', error.message);
-        alert('Error fetching flashcard sets: ' + error.message);
+        setError('Failed to fetch flashcard sets: ' + error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchSets();
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleCreateFlashcard = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setSuccessMessage('');
 
     const token = localStorage.getItem('token');
     if (!token) {
       alert('You must be logged in to create a flashcard');
+      setLoading(false);
       return;
     }
 
     try {
-      let setId = selectedSetId;
-
-      //If no set is selected, creates a new flashcard set.
-      if (!selectedSetId && newSetName) {
-        const response = await fetch('http://localhost:3000/api/flashcards/flashcardsets', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name: newSetName }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Error creating flashcard set: ${response.statusText}`);
-        }
-
-        const newSet = await response.json();
-        setId = newSet.id;
-
-        // Updates the dropdown with the new set
-        setSets((prevSets) => [...prevSets, newSet]);
-        setSelectedSetId(newSet.id); 
-      }
-
-      // Creates the flashcard in the selected set.
       const response = await fetch('http://localhost:3000/api/flashcards', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          setId,
+          setId: selectedSetId,
           question,
           answer,
           difficulty,
@@ -102,120 +85,144 @@ const CreateFlashcards = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Error creating flashcard: ${errorData.error || response.statusText}`);
+        throw new Error('Failed to create flashcard');
       }
 
-      alert('Flashcard created successfully!');
+      const newFlashcard = await response.json();
+      setSuccessMessage('Flashcard created successfully');
       setQuestion('');
       setAnswer('');
       setDifficulty('EASY');
-
-      // Navigates back to the flashcard set page.
-      navigate('/my-flashcards'); 
     } catch (error) {
       console.error('Error creating flashcard:', error.message);
-      alert('Error: ' + error.message);
+      setError('Failed to create flashcard: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* From Tailwind */
+  const handleCreateSet = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in to create a flashcard set');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3000/api/flashcardSets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newSetName }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create flashcard set');
+      }
+
+      const newSet = await response.json();
+      setSets([...sets, newSet]);
+      setSelectedSetId(newSet.id);
+      setNewSetName('');
+      alert('Flashcard set created successfully');
+    } catch (error) {
+      console.error('Error creating flashcard set:', error.message);
+      setError('Failed to create flashcard set: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Create Flashcards</h2>
+    <div className="max-w-4xl mx-auto p-6">
+      <h3 className="text-lg font-semibold text-gray-900">Create Flashcard</h3>
 
-      {/* Only show the "Choose existing set" dropdown if the set isn't preselected */}
-      {!isSetPreselected && (
-        <>
-          <div>
-            <label htmlFor="setId" className="block text-sm font-medium text-gray-700">
-              Choose an existing set
-            </label>
-            <select
-              id="setId"
-              value={selectedSetId}
-              onChange={(e) => setSelectedSetId(e.target.value)}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              <option value="">-- Select a set --</option>
-              {sets.map((set) => (
-                <option key={set.id} value={set.id}>
-                  {set.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {loading && <p>Loading...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+      {successMessage && <p className="text-green-500">{successMessage}</p>}
 
-          <div>
-            <label htmlFor="newSetName" className="block text-sm font-medium text-gray-700">
-              Or create a new set
-            </label>
-            <input
-              type="text"
-              id="newSetName"
-              value={newSetName}
-              onChange={(e) => setNewSetName(e.target.value)}
-              placeholder="New set name"
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Question input */}
-      <div>
-        <label htmlFor="question" className="block text-sm font-medium text-gray-700">
-          Question
+      <form onSubmit={handleCreateFlashcard} className="mt-4 border p-4">
+        <label>
+          Select Flashcard Set:
+          <select
+            value={selectedSetId}
+            onChange={(e) => setSelectedSetId(e.target.value)}
+            className="block w-full mt-1 border rounded-md p-2"
+            disabled={isSetPreselected}
+          >
+            <option value="">Select a set</option>
+            {sets.map((set) => (
+              <option key={set.id} value={set.id}>
+                {set.name}
+              </option>
+            ))}
+          </select>
         </label>
-        <input
-          type="text"
-          id="question"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          required
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
 
-      {/* Answer input */}
-      <div>
-        <label htmlFor="answer" className="block text-sm font-medium text-gray-700">
-          Answer
+        <label className="mt-4 block">
+          Question:
+          <input
+            type="text"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            className="block w-full mt-1 border rounded-md p-2"
+          />
         </label>
-        <input
-          type="text"
-          id="answer"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          required
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        />
-      </div>
 
-      {/* Difficulty input */}
-      <div>
-        <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700">
-          Difficulty
+        <label className="mt-4 block">
+          Answer:
+          <input
+            type="text"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            className="block w-full mt-1 border rounded-md p-2"
+          />
         </label>
-        <select
-          id="difficulty"
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-        >
-          <option value="EASY">Easy</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HARD">Hard</option>
-        </select>
-      </div>
 
-      {/* Submit button */}
-      <button
-        onClick={handleSubmit}
-        className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-400 mt-4"
-      >
-        Create Flashcard
-      </button>
+        <label className="mt-4 block">
+          Difficulty:
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="block w-full mt-1 border rounded-md p-2"
+          >
+            <option value="EASY">Easy</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HARD">Hard</option>
+          </select>
+        </label>
+
+        <div className="mt-4 flex space-x-2">
+          <button type="submit" className="px-4 py-2 bg-green-200 text-white rounded-md hover:bg-green-300">
+            Create Flashcard
+          </button>
+        </div>
+      </form>
+
+      <h3 className="text-lg font-semibold text-gray-900 mt-8">Create New Flashcard Set</h3>
+      <form onSubmit={handleCreateSet} className="mt-4 border p-4">
+        <label>
+          Set Name:
+          <input
+            type="text"
+            value={newSetName}
+            onChange={(e) => setNewSetName(e.target.value)}
+            className="block w-full mt-1 border rounded-md p-2"
+          />
+        </label>
+
+        <div className="mt-4 flex space-x-2">
+          <button type="submit" className="px-4 py-2 bg-blue-200 text-white rounded-md hover:bg-blue-300">
+            Create Set
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
