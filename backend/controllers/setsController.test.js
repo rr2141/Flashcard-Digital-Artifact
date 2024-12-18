@@ -1,7 +1,17 @@
+// setsController.test.js
+
 const request = require('supertest');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { getAllFlashcardSets, getFlashcardSetbyID, createFlashcardSet, updateFlashcardSet, deleteFlashcardSet, addCommentToSet, getCommentsForSet } = require('../controllers/setController');
+const { 
+    getAllFlashcardSets, 
+    getFlashcardSetbyID, 
+    createFlashcardSet, 
+    updateFlashcardSet, 
+    deleteFlashcardSet, 
+    addCommentToSet, 
+    getCommentsForSet 
+} = require('../controllers/setController');
 const prisma = require('../prisma');
 const { authenticate } = require('../middleware/authenticate');
 
@@ -11,18 +21,25 @@ jest.mock('../middleware/authenticate');
 const app = express();
 app.use(bodyParser.json());
 app.use(authenticate);
+
 app.get('/api/flashcardSets', getAllFlashcardSets);
-app.get('/api/flashcardSets/:setID', getFlashcardSetbyID);
+app.get('/api/flashcardSets/:setId', getFlashcardSetbyID);
 app.post('/api/flashcardSets', createFlashcardSet);
-app.put('/api/flashcardSets/:id', updateFlashcardSet);
-app.delete('/api/flashcardSets/:id', deleteFlashcardSet);
-app.post('/api/flashcardSets/:setID/comments', addCommentToSet);
-app.get('/api/flashcardSets/:setID/comments', getCommentsForSet);
+app.put('/api/flashcardSets/:setId', updateFlashcardSet);
+app.delete('/api/flashcardSets/:setId', deleteFlashcardSet);
+app.post('/api/flashcardSets/:setId/comments', addCommentToSet);
+app.get('/api/flashcardSets/:setId/comments', getCommentsForSet);
 
 describe('Set Controller', () => {
     const mockUser = { id: 1, username: 'testUser', admin: false };
-    const mockFlashcardSet = { id: 1, name: 'Test Set', cards: [], comments: [] };
-    const mockComment = { id: 1, comment: 'Test Comment', setId: 1, user: { id: 1, username: 'testUser' } };
+    const mockFlashcardSet = { id: 1, name: 'Test Set', userId: 1, cards: [], comments: [] };
+    const mockComment = { 
+        id: 1, 
+        comment: 'Test Comment', 
+        setId: 1, 
+        user: { id: 1, username: 'testUser' }, 
+        createdAt: new Date().toISOString(),
+    };
 
     beforeEach(() => {
         authenticate.mockImplementation((req, res, next) => {
@@ -55,7 +72,7 @@ describe('Set Controller', () => {
         });
 
         it('should return 500 if an error occurs', async () => {
-            prisma.flashcardSet.findMany.mockRejectedValue(new Error('Database error'));
+            prisma.flashcardSet.findMany.mockRejectedValue(new Error('Internal Server Error'));
 
             const response = await request(app).get('/api/flashcardSets');
 
@@ -65,7 +82,7 @@ describe('Set Controller', () => {
     });
 
     describe('getFlashcardSetbyID', () => {
-        it('should return 200 and the flashcard set for a valid setID', async () => {
+        it('should return 200 and the flashcard set for a valid setId', async () => {
             prisma.flashcardSet.findUnique.mockResolvedValue(mockFlashcardSet);
 
             const response = await request(app).get('/api/flashcardSets/1');
@@ -74,7 +91,7 @@ describe('Set Controller', () => {
             expect(response.body).toEqual(mockFlashcardSet);
         });
 
-        it('should return 400 if setID is not a number', async () => {
+        it('should return 400 if setId is not a number', async () => {
             const response = await request(app).get('/api/flashcardSets/invalid');
 
             expect(response.status).toBe(400);
@@ -102,6 +119,7 @@ describe('Set Controller', () => {
 
     describe('createFlashcardSet', () => {
         it('should return 201 and the created flashcard set for a valid request', async () => {
+            prisma.flashcardSet.count.mockResolvedValue(0);
             prisma.flashcardSet.create.mockResolvedValue(mockFlashcardSet);
 
             const response = await request(app)
@@ -129,10 +147,13 @@ describe('Set Controller', () => {
                 .send({ name: 'Test Set' });
 
             expect(response.status).toBe(429);
-            expect(response.body).toEqual({ error: 'You have reached the maximum number of flashcard sets allowed today. Please try again tomorrow.' });
+            expect(response.body).toEqual({ 
+                error: 'You have reached the maximum number of flashcard sets allowed today. Please try again tomorrow.' 
+            });
         });
 
         it('should return 500 if an error occurs', async () => {
+            prisma.flashcardSet.count.mockResolvedValue(0);
             prisma.flashcardSet.create.mockRejectedValue(new Error('Database error'));
 
             const response = await request(app)
@@ -201,6 +222,7 @@ describe('Set Controller', () => {
             const response = await request(app).delete('/api/flashcardSets/1');
 
             expect(response.status).toBe(204);
+            expect(response.body).toEqual({});
         });
 
         it('should return 404 if flashcard set is not found', async () => {
@@ -224,18 +246,24 @@ describe('Set Controller', () => {
     });
 
     describe('addCommentToSet', () => {
-        const mockCommentNoUser = { id: 1, comment: 'Test Comment', setId: 1 };
+        const mockCommentWithUser = { 
+            id: 1, 
+            comment: 'Test Comment', 
+            setId: 1, 
+            user: { id: 1, username: 'testUser' }, 
+            createdAt: new Date().toISOString(),
+        };
     
         it('should return 201 and the created comment for a valid request', async () => {
             prisma.flashcardSet.findUnique.mockResolvedValue(mockFlashcardSet);
-            prisma.comment.create.mockResolvedValue(mockCommentNoUser);
+            prisma.comment.create.mockResolvedValue(mockCommentWithUser);
     
             const response = await request(app)
                 .post('/api/flashcardSets/1/comments')
                 .send({ comment: 'Test Comment' });
     
             expect(response.status).toBe(201);
-            expect(response.body).toEqual(mockCommentNoUser);
+            expect(response.body).toEqual(mockCommentWithUser);
         });
     
         it('should return 400 if comment is missing', async () => {
@@ -274,31 +302,34 @@ describe('Set Controller', () => {
     });
 
     describe('getCommentsForSet', () => {
-        it('should return 200 and all comments for a valid setID', async () => {
+        it('should return 200 and all comments for a valid setId', async () => {
+            prisma.flashcardSet.findUnique.mockResolvedValue(mockFlashcardSet);
             prisma.comment.findMany.mockResolvedValue([mockComment]);
-    
+
             const response = await request(app).get('/api/flashcardSets/1/comments');
-    
+
             expect(response.status).toBe(200);
             expect(response.body).toEqual([mockComment]);
         });
-    
+
         it('should return 404 if no comments are found for the set', async () => {
+            prisma.flashcardSet.findUnique.mockResolvedValue(mockFlashcardSet);
             prisma.comment.findMany.mockResolvedValue([]);
-    
+
             const response = await request(app).get('/api/flashcardSets/1/comments');
-    
+
             expect(response.status).toBe(404);
             expect(response.body).toEqual({ error: 'No comments found for this set' });
         });
-    
+
         it('should return 500 if an error occurs', async () => {
+            prisma.flashcardSet.findUnique.mockResolvedValue(mockFlashcardSet);
             prisma.comment.findMany.mockRejectedValue(new Error('Database error'));
-    
+
             const response = await request(app).get('/api/flashcardSets/1/comments');
-    
+
             expect(response.status).toBe(500);
-            expect(response.body).toEqual({ error: 'Error fetching comments for set' });
+            expect(response.body).toEqual({ error: 'Error fetching comments' });
         });
     });
 

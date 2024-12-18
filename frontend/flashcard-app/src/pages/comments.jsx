@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 
-const CommentPage = ({ selectedSet, onBackToHome, onAddComment }) => {
+const CommentPage = ({ selectedSet, onBackToHome }) => {
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -29,12 +29,10 @@ const CommentPage = ({ selectedSet, onBackToHome, onAddComment }) => {
         });
 
         const responseData = await response.json();
-
         if (!response.ok) {
           console.error('Failed to fetch comments:', responseData);
-          throw new Error('Failed to fetch comments');
+          throw new Error(responseData.error || 'Failed to fetch comments');
         }
-
         setComments(responseData);
       } catch (error) {
         console.error('Error fetching comments:', error.message);
@@ -62,24 +60,22 @@ const CommentPage = ({ selectedSet, onBackToHome, onAddComment }) => {
       const response = await fetch(`http://localhost:3000/api/flashcardSets/${selectedSet.id}/comments`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ comment: newComment }),
+        body: JSON.stringify({
+          comment: newComment,
+        }),
       });
 
       const responseData = await response.json();
-
       if (!response.ok) {
         console.error('Failed to add comment:', responseData);
-        throw new Error('Failed to add comment');
+        throw new Error(responseData.error || 'Failed to add comment');
       }
 
-      const addedComment = responseData;
-      setComments([...comments, addedComment]);
-      onAddComment(selectedSet.id, addedComment);
+      setComments((prevComments) => [...prevComments, responseData]);
       setNewComment('');
-      alert('Comment added successfully!');
     } catch (error) {
       console.error('Error adding comment:', error.message);
       setError('Error adding comment: ' + error.message);
@@ -132,7 +128,10 @@ const CommentPage = ({ selectedSet, onBackToHome, onAddComment }) => {
             {currentComments.map((comment) => (
               <li key={comment.id} className="border p-4 rounded-md">
                 <p>{comment.comment}</p>
-                <p className="text-sm text-gray-500">Posted by {comment.user.username} on {new Date(comment.createdAt).toLocaleString()}</p>
+                <p className="text-sm text-gray-500">
+                  Posted by {comment.user?.username || 'Unknown'} on{' '}
+                  {new Date(comment.createdAt).toLocaleString()}
+                </p>
               </li>
             ))}
           </ul>
@@ -159,7 +158,8 @@ const CommentPage = ({ selectedSet, onBackToHome, onAddComment }) => {
         <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">{indexOfFirstComment + 1}</span> to <span className="font-medium">{Math.min(indexOfLastComment, comments.length)}</span> of{' '}
+              Showing <span className="font-medium">{indexOfFirstComment + 1}</span> to{' '}
+              <span className="font-medium">{Math.min(indexOfLastComment, comments.length)}</span> of{' '}
               <span className="font-medium">{comments.length}</span> results
             </p>
           </div>
@@ -177,7 +177,11 @@ const CommentPage = ({ selectedSet, onBackToHome, onAddComment }) => {
                 <button
                   key={index + 1}
                   onClick={() => setCurrentPage(index + 1)}
-                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === index + 1 ? 'bg-indigo-600 text-white' : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'} focus:z-20 focus:outline-offset-0`}
+                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                    currentPage === index + 1
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                  } focus:z-20 focus:outline-offset-0`}
                 >
                   {index + 1}
                 </button>
