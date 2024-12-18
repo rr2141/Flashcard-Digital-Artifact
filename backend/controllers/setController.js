@@ -54,49 +54,54 @@ const getFlashcardSetbyID = async (req, res) => {
 
 // Create a flashcard set
 const createFlashcardSet = async (req, res) => {
-    const { name } = req.body;  
-    const userId = req.user.id;   request
-    
-    if (!name) {
-        return res.status(400).json({ error: 'Name is required' });
+  const { name } = req.body;
+  const userId = req.user.id; 
+
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  try {
+    const settings = await prisma.settings.findFirst(); 
+
+    const limit = settings ? settings.dailyLimit : 20; 
+  
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const setsCreatedToday = await prisma.flashcardSet.count({
+      where: {
+        userId: userId,
+        createdAt: {
+          gte: start,
+          lt: end,
+        },
+      },
+    });
+
+    if (setsCreatedToday >= limit) {
+      return res.status(429).json({
+        error:
+          'You have reached the maximum number of flashcard sets allowed today. Please try again tomorrow.',
+      });
     }
 
-    try {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0); 
-      const end = new Date();
-      end.setHours(23, 59, 59, 999); 
-  
-      const setsCreatedToday = await prisma.flashcardSet.count({
-        where: {
-          userId: userId,  
-          createdAt: {
-            gte: start,  
-            lt: end,     
-          },
-        },
-      });
-  
-      if (setsCreatedToday >= 20) {
-        return res.status(429).json({
-          error: "You have reached the maximum number of flashcard sets allowed today. Please try again tomorrow.",
-        });
-      }
-  
-      const flashcardSet = await prisma.flashcardSet.create({
-        data: {
-          name,      
-          userId,    
-        },
-      });
-  
-    
-      res.status(201).json(flashcardSet);
-    } catch (error) {
-      console.error("Error creating flashcard set:", error.message);
-      res.status(500).json({ error: error.message });
-    }
-  };
+    const flashcardSet = await prisma.flashcardSet.create({
+      data: {
+        name,
+        userId,
+      },
+    });
+
+    res.status(201).json(flashcardSet);
+  } catch (error) {
+    console.error('Error creating flashcard set:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 // Update a flashcard set by ID
 const updateFlashcardSet = async (req, res) => {
