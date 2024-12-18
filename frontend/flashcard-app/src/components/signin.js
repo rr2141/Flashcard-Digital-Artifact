@@ -1,8 +1,7 @@
-// SignIn.js
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// Allows users to sign in to their account.
 export default function SignIn({ setToken }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -33,8 +32,17 @@ export default function SignIn({ setToken }) {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+        
         setToken(data.token);
-        // Navigation is now handled by App.jsx based on state
+
+        const decodedToken = JSON.parse(atob(data.token.split('.')[1]));
+        const isAdmin = decodedToken.admin;
+
+        if (isAdmin) {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/my-flashcards');
+        }
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -44,6 +52,7 @@ export default function SignIn({ setToken }) {
     }
   };
 
+  // Tailwind CSS for the sign in form.
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -53,10 +62,18 @@ export default function SignIn({ setToken }) {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form action="#" method="POST" className="space-y-6" onSubmit={handleLogin}>
+        <form
+          action="#"
+          method="POST"
+          className="space-y-6"
+          onSubmit={handleLogin}
+        >
           {/* Username Field */}
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-900">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-900"
+            >
               Username
             </label>
             <div className="mt-2">
@@ -78,11 +95,17 @@ export default function SignIn({ setToken }) {
           {/* Password Field */}
           <div>
             <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-900">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-900"
+              >
                 Password
               </label>
               <div className="text-sm">
-                <a href="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-500">
+                <a
+                  href="/forgot-password"
+                  className="font-semibold text-indigo-600 hover:text-indigo-500"
+                >
                   Forgot password?
                 </a>
               </div>
@@ -116,7 +139,10 @@ export default function SignIn({ setToken }) {
 
         <p className="mt-10 text-center text-sm text-gray-500">
           Don't have an account?{' '}
-          <a href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-500">
+          <a
+            href="/signup"
+            className="font-semibold text-indigo-600 hover:text-indigo-500"
+          >
             Sign up here
           </a>
         </p>

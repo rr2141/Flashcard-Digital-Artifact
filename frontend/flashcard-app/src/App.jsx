@@ -1,7 +1,5 @@
-// App.jsx
-
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navigation from './components/navigation';
 import Home from './pages/Home';
 import Flashcard from './pages/Flashcard';
@@ -13,37 +11,20 @@ import SignUp from './components/signup';
 import AdminDashboard from './pages/AdminDashboard';
 import Settings from './pages/Settings';
 
-// Component to handle redirection after login
-const AuthRedirect = ({ token, isAdmin }) => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (token) {
-      if (isAdmin) {
-        navigate('/admin-dashboard');
-      } else {
-        navigate('/my-flashcards');
-      }
-    }
-  }, [token, isAdmin, navigate]);
-
-  return null;
-};
-
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isAdmin, setIsAdmin] = useState(null); 
   const [username, setUsername] = useState('User');
   const [loading, setLoading] = useState(true);
 
-
   const decodeToken = (storedToken) => {
     try {
       const decoded = JSON.parse(atob(storedToken.split('.')[1]));
+      console.log('Decoded Token:', decoded); // Debugging line
       setIsAdmin(decoded.admin);
       setUsername(decoded.username || 'User');
     } catch (error) {
-      console.error("Error decoding token: ", error);
+      console.error("Error decoding token:", error);
       setIsAdmin(false);
       setUsername('User');
     }
@@ -63,9 +44,7 @@ const App = () => {
 
   useEffect(() => {
     if (token) {
-      setLoading(true);
       decodeToken(token);
-      setLoading(false);
     } else {
       setIsAdmin(false);
       setUsername('User');
@@ -88,28 +67,74 @@ const App = () => {
   return (
     <Router>
       <Navigation username={username} onLogout={handleLogout} isAdmin={isAdmin} />
-      {/* Handle redirection after login */}
-      <AuthRedirect token={token} isAdmin={isAdmin} />
       <div className="p-4">
         <Routes>
           {/* Route for Home page */}
-          <Route path="/" element={token ? <Home /> : <SignIn setToken={setToken} />} />
-
-          {/* Routes for Flashcards and other pages, only accessible if logged in */}
-          <Route path="/create" element={token ? <CreateFlashcards /> : <SignIn setToken={setToken} />} />
-          <Route path="/my-flashcards" element={token ? <MyFlashcards /> : <SignIn setToken={setToken} />} />
-          <Route path="/collection" element={token ? <Collectionpage /> : <SignIn setToken={setToken} />} />
-          <Route path="/flashcard" element={token ? <Flashcard set={{ id: 1, name: 'Test Set' }} onBack={() => {}} /> : <SignIn setToken={setToken} />} />
-          <Route path="/settings" element={token ? <Settings /> : <SignIn setToken={setToken} />} />
-
-          {/* Admin Dashboard only accessible if the user is an admin */}
           <Route 
-            path="/admin-dashboard" 
-            element={token && isAdmin ? <AdminDashboard /> : <Navigate to="/" replace />} 
+            path="/" 
+            element={
+              token ? 
+                <Navigate to={isAdmin ? "/admin-dashboard" : "/my-flashcards"} replace /> 
+                : 
+                <Home /> 
+            } 
+          />
+
+          {/* Route for SignIn page */}
+          <Route 
+            path="/signin" 
+            element={
+              token ? 
+                <Navigate to={isAdmin ? "/admin-dashboard" : "/my-flashcards"} replace /> 
+                : 
+                <SignIn setToken={setToken} /> 
+            } 
           />
 
           {/* Route for SignUp page */}
           <Route path="/signup" element={<SignUp />} />
+
+          {/* Protected Routes */}
+          <Route 
+            path="/create" 
+            element={
+              token ? <CreateFlashcards /> : <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/my-flashcards" 
+            element={
+              token ? <MyFlashcards /> : <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/collection" 
+            element={
+              token ? <Collectionpage /> : <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/flashcard" 
+            element={
+              token ? <Flashcard set={{ id: 1, name: 'Test Set' }} onBack={() => {}} /> 
+                    : 
+              <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              token ? <Settings /> : <Navigate to="/signin" replace />
+            } 
+          />
+
+          {/* Admin Dashboard only accessible if the user is an admin */}
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              token && isAdmin ? <AdminDashboard /> : <Navigate to="/" replace />
+            } 
+          />
 
           {/* Catch-all Route for Undefined Paths */}
           <Route path="*" element={<Navigate to="/" replace />} />

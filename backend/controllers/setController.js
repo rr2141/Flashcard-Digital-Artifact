@@ -176,21 +176,22 @@ const deleteFlashcardSet = async (req, res) => {
 // Add a comment to a specific flashcard set
 const addCommentToSet = async (req, res) => {
     const { setId } = req.params;
-    const { comment } = req.body;
+    const { comment,rating } = req.body;
     const userId = req.user.id;
-  
-    console.log('Received setId:', setId);
-    console.log('Received comment:', comment);
-    console.log('User ID:', userId);
 
     if (!comment) {
       return res.status(400).json({ error: 'Comment cannot be empty' });
+    }
+
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be a number between 1 and 5.' });
     }
   
     try {
       const newComment = await prisma.comment.create({
         data: {
           comment,
+          rating,
           set: {
             connect: { id: parseInt(setId) },
           },
@@ -210,16 +211,13 @@ const addCommentToSet = async (req, res) => {
 // Fetch all comments for a specific flashcard set
 const getCommentsForSet = async (req, res) => {
     const { setId } = req.params;
-    console.log('Fetching comments for setId:', setId);
     try {
       const parsedSetId = parseInt(setId, 10);
-      console.log('Parsed setId:', parsedSetId);
 
       if (isNaN(parsedSetId)) {
         return res.status(400).json({ error: 'Invalid setId provided.' });
       }
 
-      // Optional: Verify that the flashcard set exists
       const flashcardSet = await prisma.flashcardSet.findUnique({
         where: { id: parsedSetId },
       });
@@ -229,8 +227,9 @@ const getCommentsForSet = async (req, res) => {
       }
 
       const comments = await prisma.comment.findMany({
-        where: { setId: parsedSetId }, // Ensure this matches your Prisma schema
+        where: { setId: parsedSetId }, 
         include: { user: true },
+        orderBy: { createdAt: 'desc' },
       });
 
       if (comments.length === 0) {

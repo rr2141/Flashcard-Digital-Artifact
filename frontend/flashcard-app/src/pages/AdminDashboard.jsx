@@ -10,7 +10,7 @@ const AdminDashboard = () => {
   const [loadingLimit, setLoadingLimit] = useState(true);
   const [updatingLimit, setUpdatingLimit] = useState(false);
 
-  // Fetch Admin Dashboard Data
+  // Fetches the dashboard data for the admin
   useEffect(() => {
     const fetchDashboardData = async () => {
       const token = localStorage.getItem('token');
@@ -39,7 +39,7 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Fetch All Users
+  // Fetches all the users in the database
   useEffect(() => {
     const fetchUsers = async () => {
       const token = localStorage.getItem('token');
@@ -70,7 +70,7 @@ const AdminDashboard = () => {
     fetchUsers();
   }, []);
 
-  // Fetch Current Set Creation Limit
+  // Fetches the set limit for flashcard sets created per day
   useEffect(() => {
     const fetchSetLimit = async () => {
       const token = localStorage.getItem('token');
@@ -101,7 +101,7 @@ const AdminDashboard = () => {
     fetchSetLimit();
   }, []);
 
-  // Handle Delete User
+  // Admin can delete a user
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return; // Confirmation prompt
 
@@ -129,7 +129,8 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle Set Limit Update
+  // Admin can set the limit of flashcard sets created per day
+  // 20 is the default limit
   const handleUpdateSetLimit = async (e) => {
     e.preventDefault();
 
@@ -223,7 +224,7 @@ const AdminDashboard = () => {
         )}
       </div>
 
-      {/* Users Management */}
+      {/* Shows all Users */}
       <div className="bg-white p-6 rounded shadow-md w-full max-w-2xl">
         <h3 className="text-xl font-semibold mb-4">All Users</h3>
 
