@@ -30,7 +30,7 @@ export default function Navigation({ username = 'User', onLogout, isAdmin }) {
   const handleAdminClick = (e) => {
     if (!isAdmin) {
       e.preventDefault();
-      alert('You are not authorized to access the Admin Dashboard.');
+      alert('You are not authorised to access the Admin Dashboard!');
     } else {
       navigate('/admin-dashboard');
     }

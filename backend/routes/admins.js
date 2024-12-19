@@ -4,9 +4,6 @@ const { isAdmin } = require('../middleware/admin');
 const { authenticate } = require('../middleware/authenticate');
 const adminController = require('../controllers/adminsController');
 
-// Admin dashboard (protected route)
-router.get('/dashboard', authenticate, isAdmin, adminController.getAdminDashboard);
-
 // Fetch all users (protected route)
 router.get('/', authenticate, isAdmin,  adminController.getAllUsers);
 

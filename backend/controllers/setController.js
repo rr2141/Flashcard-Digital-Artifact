@@ -144,33 +144,39 @@ const updateFlashcardSet = async (req, res) => {
     }
 };
 
+
 // Delete a flashcard set by ID
 const deleteFlashcardSet = async (req, res) => {
-    const { id } = req.params; 
+  const { setId } = req.params;
+  console.log('Received ID:', setId);
 
-    try {
-     
-        const existingSet = await prisma.flashcardSet.findUnique({
-            where: { id: parseInt(id) },
-        });
+  try {
+      const parsedId = parseInt(setId, 10);
 
-        if (!existingSet) {
-            return res.status(404).json({ error: "The flashcard set was not found" });
-        }
-        
+      if (isNaN(parsedId)) {
+          console.error(`Invalid flashcard set ID format: ${setId}`);
+          return res.status(400).json({ error: 'Invalid flashcard set ID format.' });
+      }
 
-        await prisma.flashcard.deleteMany({
-            where: { setId: parseInt(id) },  
-        });
-        
-        await prisma.flashcardSet.delete({
-            where: { id: parseInt(id) },
-        });
+      const existingSet = await prisma.flashcardSet.findUnique({
+          where: { id: parsedId },
+      });
 
-        res.status(204).send(); 
-    } catch (error) {
-        res.status(500).json({ error: error.message }); 
-    }
+      if (!existingSet) {
+          console.error(`Flashcard set not found with ID: ${parsedId}`);
+          return res.status(404).json({ error: 'The flashcard set was not found.' });
+      }
+
+      await prisma.flashcardSet.delete({
+          where: { id: parsedId },
+      });
+
+      console.log(`Flashcard set deleted successfully with ID: ${parsedId}`);
+      res.status(204).send();
+  } catch (error) {
+      console.error(`Error deleting flashcard set with ID ${parsedId}:`, error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
 };
 
 // Add a comment to a specific flashcard set

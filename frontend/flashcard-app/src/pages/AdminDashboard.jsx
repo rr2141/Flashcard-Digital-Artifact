@@ -1,43 +1,15 @@
+// AdminDashboard.jsx
+
 import React, { useState, useEffect } from 'react';
 import { TrashIcon } from '@heroicons/react/20/solid'; 
 
 const AdminDashboard = () => {
-  const [dashboardData, setDashboardData] = useState(null);
   const [users, setUsers] = useState([]);
   const [setLimit, setSetLimit] = useState(20); 
   const [newSetLimit, setNewSetLimit] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingLimit, setLoadingLimit] = useState(true);
   const [updatingLimit, setUpdatingLimit] = useState(false);
-
-  // Fetches the dashboard data for the admin
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      const token = localStorage.getItem('token');
-
-      try {
-        const response = await fetch('http://localhost:3000/api/admins/dashboard', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setDashboardData(data);
-        } else {
-          alert(data.error || 'Error fetching dashboard data');
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        alert('An unexpected error occurred while fetching dashboard data.');
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
 
   // Fetches all the users in the database
   useEffect(() => {
@@ -175,21 +147,6 @@ const AdminDashboard = () => {
   // Tailwind CSS
   return (
     <div className="min-h-screen bg-purple-100 flex flex-col items-center p-6">
-      <h2 className="text-3xl font-bold mb-6">Admin Dashboard</h2>
-
-      {/* Admin Dashboard Data */}
-      {dashboardData ? (
-        <div className="bg-white p-6 rounded shadow-md w-full max-w-2xl mb-8">
-          <h3 className="text-xl font-semibold mb-4">Welcome, Admin!</h3>
-          <p className="mb-2">Here is the data for the admin dashboard:</p>
-          <pre className="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
-            {JSON.stringify(dashboardData, null, 2)}
-          </pre>
-        </div>
-      ) : (
-        <p>Loading dashboard...</p>
-      )}
-
       {/* Daily Set Limit Management */}
       <div className="bg-white p-6 rounded shadow-md w-full max-w-2xl mb-8">
         <h3 className="text-xl font-semibold mb-4">Manage Flashcard Set Limit</h3>
@@ -214,7 +171,7 @@ const AdminDashboard = () => {
                 type="submit"
                 disabled={updatingLimit}
                 className={`px-4 py-2 rounded-md text-white ${
-                  updatingLimit ? 'bg-gray-400' : 'bg-green-500 hover:bg-green-600'
+                  updatingLimit ? 'bg-gray-400' : 'bg-green-200 hover:bg-green-400'
                 }`}
               >
                 {updatingLimit ? 'Updating...' : 'Update Limit'}

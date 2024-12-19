@@ -9,6 +9,7 @@ const FlashcardsPage = () => {
   const [newSetName, setNewSetName] = useState('');
   const [showForm, setShowForm] = useState(false);
 
+
   // Fetch flashcard sets on page load
   useEffect(() => {
     const fetchSets = async () => {
@@ -160,7 +161,6 @@ const FlashcardsPage = () => {
                   <div className="flex min-w-0 gap-x-4">
                     <div className="min-w-0 flex-auto">
                       <p className="text-sm font-semibold text-gray-900">{set.name}</p>
-                      <p className="mt-1 text-xs text-gray-500">{set.description || 'No description'}</p>
                     </div>
                   </div>
                   <div className="flex gap-x-2">

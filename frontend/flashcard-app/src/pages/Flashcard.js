@@ -50,10 +50,12 @@ const Flashcard = ({ set, onBack }) => {
     fetchFlashcards();
   }, [set.id, onBack, navigate]);
 
+  // Navigates to the create flashcard page
   const handleCreateFlashcard = () => {
     navigate('/create', { state: { setId: set.id } });
   };
 
+  // Navigate to the previous or next flashcard
   const handleFlashcardNavigation = (direction) => {
     setFlipped(false);
     if (direction === 'prev') {
@@ -66,12 +68,14 @@ const Flashcard = ({ set, onBack }) => {
     setIsEditing(false);
   };
 
+  // Edits the current flashcard
   const handleEditFlashcard = () => {
     const flashcard = flashcards[currentFlashcardIndex];
     setEditedFlashcard({ question: flashcard?.question || '', answer: flashcard?.answer || '' });
     setIsEditing(true);
   };
 
+  // Updates the flashcard with the edited content
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -108,6 +112,7 @@ const Flashcard = ({ set, onBack }) => {
     }
   };
 
+  // Deletes the current flashcard
   const handleDeleteFlashcard = async () => {
     const token = localStorage.getItem('token');
     const flashcardId = flashcards[currentFlashcardIndex]?.id;
@@ -148,6 +153,7 @@ const Flashcard = ({ set, onBack }) => {
     }
   };
 
+  // Tailwind
   return (
     <div className="p-4">
       <button

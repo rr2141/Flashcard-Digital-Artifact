@@ -1,22 +1,5 @@
 const prisma = require('../prisma');
 
-// Admin Dashboard
-const getAdminDashboard = async (req, res) => {
-    try {
-        const userCount = await prisma.user.count();
-        const flashcardSetCount = await prisma.flashcardSet.count();
-        const settings = await prisma.settings.findFirst();
-
-        res.status(200).json({
-            userCount,
-            flashcardSetCount,
-            dailyLimit: settings ? settings.dailyLimit : 20, 
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
 // Get all users
 const getAllUsers = async (req, res) => {
     try {
@@ -83,7 +66,6 @@ const updateSetLimit = async (req, res) => {
 };
 
 module.exports = {
-    getAdminDashboard,
     getAllUsers,
     deleteUserById,
     getSetLimit,
