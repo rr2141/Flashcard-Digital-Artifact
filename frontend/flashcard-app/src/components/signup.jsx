@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// To navigate back to sign in page once sign up has been completed
 import { useNavigate } from 'react-router-dom';
 
 export default function SignUp() {

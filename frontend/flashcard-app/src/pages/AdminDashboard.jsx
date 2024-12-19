@@ -1,5 +1,3 @@
-// AdminDashboard.jsx
-
 import React, { useState, useEffect } from 'react';
 import { TrashIcon } from '@heroicons/react/20/solid'; 
 

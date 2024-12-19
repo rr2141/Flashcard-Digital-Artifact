@@ -6,6 +6,7 @@ export default function SignIn({ setToken }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false); 
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,6 +18,8 @@ export default function SignIn({ setToken }) {
       alert('Username and password are required');
       return;
     }
+
+    setLoading(true); 
 
     try {
       const response = await fetch('http://localhost:3000/api/users/login', {
@@ -49,6 +52,8 @@ export default function SignIn({ setToken }) {
     } catch (error) {
       console.error('Login Error:', error);
       alert('An unexpected error occurred. Please try again later.');
+    } finally {
+      setLoading(false); 
     }
   };
 
@@ -130,9 +135,11 @@ export default function SignIn({ setToken }) {
           <div>
             <button
               type="submit"
-              className="w-full py-2 px-4 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              disabled={loading} 
+              className={`w-full py-2 px-4 bg-indigo-600 text-white rounded hover:bg-indigo-700 
+                          ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
             >
-              Sign in
+              {loading ? 'Logging in...' : 'Sign in'} 
             </button>
           </div>
         </form>
