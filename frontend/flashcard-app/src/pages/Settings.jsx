@@ -1,5 +1,5 @@
-// src/pages/Settings.jsx
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 
 const Settings = () => {
   const [passwordData, setPasswordData] = useState({
@@ -9,6 +9,22 @@ const Settings = () => {
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [userId, setUserId] = useState(null); 
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUserId(parsedUser.id); 
+      } catch (err) {
+        console.error('Error parsing user from localStorage:', err);
+        setError('Invalid user data. Please sign in again.');
+      }
+    } else {
+      setError('Authentication required. Please sign in again.');
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,14 +45,13 @@ const Settings = () => {
       setError('New passwords do not match.');
       return;
     }
-    
+
     if (newPassword.length < 6) {
       setError('New password must be at least 6 characters long.');
       return;
     }
 
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
 
     if (!token || !userId) {
       setError('Authentication required. Please sign in again.');
@@ -76,6 +91,7 @@ const Settings = () => {
     }
   };
 
+  //Tailwind CSS
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-md shadow-md">
       <h2 className="text-2xl font-semibold mb-4">Update Password</h2>

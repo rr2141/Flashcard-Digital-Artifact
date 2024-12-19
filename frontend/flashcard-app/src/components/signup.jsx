@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// To navigate back to sign in page once sign up has been completed
 import { useNavigate } from 'react-router-dom';
 
 export default function SignUp() {
@@ -46,7 +45,7 @@ export default function SignUp() {
     }
   };
 
-  /* From Tailwind */
+  /* Ref Tailwind */
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">

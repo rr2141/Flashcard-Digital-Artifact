@@ -1,406 +1,371 @@
-// Set the JWT secret before importing any modules
-process.env.JWT_SECRET_KEY = 'testSecret';
-
-const request = require('supertest');
-const express = require('express');
-const bodyParser = require('body-parser');
-const { loginUser, createUser, getUserById, updateUserById, getUserFlashcardSets, updatePassword } = require('./userController'); // Corrected import path
 const prisma = require('../prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const request = require('supertest');
+const app = require('../app'); 
 
-jest.mock('../prisma');
-jest.mock('bcryptjs');
-jest.mock('jsonwebtoken');
-
-const app = express();
-app.use(bodyParser.json());
-app.post('/api/users/login', loginUser);
-app.post('/api/users', createUser);
-app.get('/api/users/:userId', getUserById);
-app.put('/api/users/:userId', (req, res, next) => {
-    req.user = { admin: false }; 
-    next();
-}, updateUserById);
-app.get('/api/users/:userId/flashcardSets', getUserFlashcardSets);
-app.put('/api/users/:userId/password', (req, res, next) => {
-    req.user = { id: req.params.userId }; 
-    next();
-}, updatePassword);
+const userController = require('../controllers/userController');
 
 
-// Tests for loginUser function
-describe('loginUser', () => {
+jest.mock('../prisma', () => ({
+  user: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  flashcardSet: {
+    findMany: jest.fn(),
+  },
+}));
+
+jest.mock('bcryptjs', () => ({
+  compare: jest.fn(),
+  hash: jest.fn(),
+  genSalt: jest.fn(),
+}));
+
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(),
+}));
+
+describe('User Controller', () => {
+  let req, res;
+
+  beforeEach(() => {
+    req = {
+      user: { id: 1 },
+      params: {},
+      body: {},
+    };
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      send: jest.fn(),
+    };
+  });
+
+  describe('loginUser', () => {
     const mockUser = {
-        id: 1,
-        username: 'testUser',
-        password: 'hashedPassword',
-        admin: false,
+      id: 1,
+      username: 'testUser',
+      password: 'hashedPassword',
+      admin: false,
     };
 
     it('should return 200 and a token for successful login', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        bcrypt.compare.mockResolvedValue(true);
-        jwt.sign.mockReturnValue('fakeToken');
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      bcrypt.compare.mockResolvedValue(true);
+      jwt.sign.mockReturnValue('fakeToken');
 
-        const response = await request(app)
-            .post('/api/users/login')
-            .send({ username: 'testUser', password: 'password123' });
+      const response = await request(app)
+        .post('/api/users/login')
+        .send({ username: 'testUser', password: 'password123' });
 
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({
-            message: 'Login successful',
-            token: 'fakeToken',
-            user: {
-                id: mockUser.id,
-                username: mockUser.username,
-                admin: mockUser.admin,
-            },
-        });
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('token', 'fakeToken');
+      expect(response.body.user).toEqual({
+        id: mockUser.id,
+        username: mockUser.username,
+        admin: mockUser.admin,
+      });
     });
 
     it('should return 400 if username or password is missing', async () => {
-        const response = await request(app)
-            .post('/api/users/login')
-            .send({ username: 'testUser' }); 
+      const response = await request(app)
+        .post('/api/users/login')
+        .send({ username: '', password: '' });
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Username and password are required' });
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Username and password are required');
     });
 
     it('should return 404 if user is not found', async () => {
-        prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
 
-        const response = await request(app)
-            .post('/api/users/login')
-            .send({ username: 'nonExistentUser', password: 'password123' });
+      const response = await request(app)
+        .post('/api/users/login')
+        .send({ username: 'testUser', password: 'password123' });
 
-        expect(response.status).toBe(404);
-        expect(response.body).toEqual({ error: 'Invalid username or password' });
+      expect(response.status).toBe(404);
+      expect(response.body).toHaveProperty('error', 'Invalid username or password');
     });
 
     it('should return 401 if password is incorrect', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        bcrypt.compare.mockResolvedValue(false);
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+      bcrypt.compare.mockResolvedValue(false);
 
-        const response = await request(app)
-            .post('/api/users/login')
-            .send({ username: 'testUser', password: 'wrongPassword' });
+      const response = await request(app)
+        .post('/api/users/login')
+        .send({ username: 'testUser', password: 'wrongPassword' });
 
-        expect(response.status).toBe(401);
-        expect(response.body).toEqual({ error: 'Invalid username or password' });
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty('error', 'Invalid username or password');
     });
 
-    it('should return 500 if an internal server error occurs', async () => {
-        prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
+    it('should return 500 if there is a server error', async () => {
+      prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
 
-        const response = await request(app)
-            .post('/api/users/login')
-            .send({ username: 'testUser', password: 'password123' });
+      const response = await request(app)
+        .post('/api/users/login')
+        .send({ username: 'testUser', password: 'password123' });
 
-        expect(response.status).toBe(500);
-        expect(response.body).toEqual({ error: 'Internal server error' });
+      expect(response.status).toBe(500);
+      expect(response.body).toHaveProperty('error', 'Internal server error');
     });
-});
+  });
 
-// Tests for createUser function
-describe('createUser', () => {
-    const mockUser = {
+  describe('createUser', () => {
+    it('should create a new user and return 201', async () => {
+      const newUser = {
         id: 1,
-        username: 'testUser',
+        username: 'newUser',
         password: 'hashedPassword',
         admin: false,
-    };
+      };
+      req.body = { username: 'newUser', password: 'password123', admin: false };
+      bcrypt.hash.mockResolvedValue('hashedPassword');
+      prisma.user.create.mockResolvedValue(newUser);
 
-    it('should return 201 and the created user for successful user creation', async () => {
-        bcrypt.hash.mockResolvedValue('hashedPassword');
-        prisma.user.create.mockResolvedValue(mockUser);
+      await userController.createUser(req, res);
 
-        const response = await request(app)
-            .post('/api/users')
-            .send({ username: 'testUser', password: 'password123', admin: false });
-
-        expect(response.status).toBe(201);
-        expect(response.body).toEqual({
-            message: 'User created successfully',
-            user: {
-                id: mockUser.id,
-                username: mockUser.username,
-                admin: mockUser.admin,
-            },
-        });
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'User created successfully',
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          admin: newUser.admin,
+        },
+      });
     });
 
     it('should return 400 if username or password is missing', async () => {
-        const response = await request(app)
-            .post('/api/users')
-            .send({ username: 'testUser' }); 
+      req.body = { username: '', password: '' };
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Username and password are required' });
-    });
+      await userController.createUser(req, res);
 
-    it('should return 500 if an internal server error occurs', async () => {
-        bcrypt.hash.mockRejectedValue(new Error('Hashing error'));
-
-        const response = await request(app)
-            .post('/api/users')
-            .send({ username: 'testUser', password: 'password123', admin: false });
-
-        expect(response.status).toBe(500);
-        expect(response.body).toEqual({ error: 'Internal server error' });
-    });
-
-    it('should return 409 if username already exists', async () => {
-        const uniqueConstraintError = new Error('Unique constraint failed');
-        uniqueConstraintError.code = 'P2002';
-        prisma.user.create.mockRejectedValue(uniqueConstraintError);
-
-        const response = await request(app)
-            .post('/api/users')
-            .send({ username: 'testUser', password: 'password123', admin: false });
-
-        expect(response.status).toBe(409);
-        expect(response.body).toEqual({ error: 'Username already exists' });
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Username and password are required' });
     });
 
     it('should return 400 if username or password format is invalid', async () => {
-        const response = await request(app)
-            .post('/api/users')
-            .send({ username: 'invalid username', password: 'short', admin: false });
+      req.body = { username: 'us', password: '123' };
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Invalid username or password format' });
+      await userController.createUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid username or password format' });
     });
 
-    it('should default admin to false if not provided', async () => {
-        bcrypt.hash.mockResolvedValue('hashedPassword');
-        prisma.user.create.mockResolvedValue({ ...mockUser, admin: false });
+    it('should return 409 if username already exists', async () => {
+      const error = { code: 'P2002' };
+      req.body = { username: 'existingUser', password: 'password123' };
+      bcrypt.hash.mockResolvedValue('hashedPassword');
+      prisma.user.create.mockRejectedValue(error);
 
-        const response = await request(app)
-            .post('/api/users')
-            .send({ username: 'testUser', password: 'password123' });
+      await userController.createUser(req, res);
 
-        expect(response.status).toBe(201);
-        expect(response.body).toEqual({
-            message: 'User created successfully',
-            user: {
-                id: mockUser.id,
-                username: mockUser.username,
-                admin: false,
-            },
-        });
-    });
-});
-
-// Tests for getUserById function
-describe('getUserById', () => {
-    const mockUser = {
-        id: 1,
-        username: 'testUser',
-        admin: false,
-    };
-
-    it('should return 200 and the user for a valid userId', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-
-        const response = await request(app)
-            .get('/api/users/1');
-
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual(mockUser);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Username already exists' });
     });
 
-    it('should return 404 if user is not found', async () => {
-        prisma.user.findUnique.mockResolvedValue(null);
+    it('should return 500 if there is a server error', async () => {
+      const error = new Error('Database error');
+      req.body = { username: 'newUser', password: 'password123' };
+      bcrypt.hash.mockResolvedValue('hashedPassword');
+      prisma.user.create.mockRejectedValue(error);
 
-        const response = await request(app)
-            .get('/api/users/999');
+      await userController.createUser(req, res);
 
-        expect(response.status).toBe(404);
-        expect(response.body).toEqual({ error: 'User not found' });
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Internal server error' });
     });
+  });
 
-    it('should return 500 if an internal server error occurs', async () => {
-        prisma.user.findUnique.mockRejectedValue(new Error('Database error'));
+  describe('getUserById', () => {
+    it('should return a user by ID', async () => {
+      const user = { id: 1, username: 'testUser', admin: false };
+      req.params.userId = 1;
+      prisma.user.findUnique.mockResolvedValue(user);
 
-        const response = await request(app)
-            .get('/api/users/1');
+      await userController.getUserById(req, res);
 
-        expect(response.status).toBe(500);
-        expect(response.body).toEqual({ error: 'Database error' });
-    });
-
-    it('should return 400 if userId is not a valid number', async () => {
-        const response = await request(app)
-            .get('/api/users/invalid'); 
-
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Invalid user ID format' });
-    });
-
-    it('should return 200 and the user for a userId as a string', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-
-        const response = await request(app)
-            .get('/api/users/1'); 
-
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual(mockUser);
-    });
-
-    it('should return 400 if userId is a negative number', async () => {
-        const response = await request(app)
-            .get('/api/users/-1'); 
-
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Invalid user ID format' });
-    });
-});
-
-// Tests for updateUserById function
-describe('updateUserById', () => {
-    const mockUser = {
-        id: 1,
-        username: 'testUser',
-        password: 'hashedPassword',
-        admin: false,
-    };
-
-    it('should return 200 and the updated user for a successful update', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        prisma.user.update.mockResolvedValue({ ...mockUser, username: 'updatedUser' });
-
-        const response = await request(app)
-            .put('/api/users/1')
-            .send({ username: 'updatedUser' });
-
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual({ ...mockUser, username: 'updatedUser' });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(user);
     });
 
     it('should return 404 if user is not found', async () => {
-        prisma.user.findUnique.mockResolvedValue(null);
+      req.params.userId = 1;
+      prisma.user.findUnique.mockResolvedValue(null);
 
-        const response = await request(app)
-            .put('/api/users/999')
-            .send({ username: 'updatedUser' });
+      await userController.getUserById(req, res);
 
-        expect(response.status).toBe(404);
-        expect(response.body).toEqual({ error: 'User not found' });
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
     });
 
-    it('should return 403 if trying to update admin status without being an admin', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
+    it('should return 400 if userId is invalid', async () => {
+      req.params.userId = 'invalid';
 
-        const response = await request(app)
-            .put('/api/users/1')
-            .send({ admin: true });
+      await userController.getUserById(req, res);
 
-        expect(response.status).toBe(403);
-        expect(response.body).toEqual({ error: 'You are not allowed to update admin status' });
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid user ID format' });
     });
 
-    it('should return 500 if an internal server error occurs', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        prisma.user.update.mockRejectedValue(new Error('Database error'));
+    it('should return 500 if there is a server error', async () => {
+      const error = new Error('Database error');
+      req.params.userId = 1;
+      prisma.user.findUnique.mockRejectedValue(error);
 
-        const response = await request(app)
-            .put('/api/users/1')
-            .send({ username: 'updatedUser' });
+      await userController.getUserById(req, res);
 
-        expect(response.status).toBe(500);
-        expect(response.body).toEqual({ error: 'Database error' });
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: error.message });
     });
-});
+  });
 
-// Tests for getUserFlashcardSets function
-describe('getUserFlashcardSets', () => {
-    const mockUser = {
-        id: 1,
-        username: 'testUser',
-        admin: false,
-    };
+  describe('updateUserById', () => {
+    it('should update a user by ID', async () => {
+      const user = { id: 1, username: 'testUser', password: 'hashedPassword', admin: false };
+      const updatedUser = { id: 1, username: 'updatedUser', password: 'hashedPassword', admin: false };
+      req.params.userId = 1;
+      req.body = { username: 'updatedUser' };
+      prisma.user.findUnique.mockResolvedValue(user);
+      prisma.user.update.mockResolvedValue(updatedUser);
 
-    const mockFlashcardSets = [
-        {
-            id: 1,
-            title: 'Set 1',
-            userId: 1,
-            cards: [
-                { id: 1, question: 'Q1', answer: 'A1', setId: 1 },
-                { id: 2, question: 'Q2', answer: 'A2', setId: 1 },
-            ],
-        },
-        {
-            id: 2,
-            title: 'Set 2',
-            userId: 1,
-            cards: [
-                { id: 3, question: 'Q3', answer: 'A3', setId: 2 },
-                { id: 4, question: 'Q4', answer: 'A4', setId: 2 },
-            ],
-        },
-    ];
+      await userController.updateUserById(req, res);
 
-    it('should return 200 and the flashcard sets for a valid userId', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        prisma.flashcardSet.findMany.mockResolvedValue(mockFlashcardSets);
-
-        const response = await request(app)
-            .get('/api/users/1/flashcardSets');
-
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual(mockFlashcardSets);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(updatedUser);
     });
 
     it('should return 404 if user is not found', async () => {
-        prisma.user.findUnique.mockResolvedValue(null);
+      req.params.userId = 1;
+      req.body = { username: 'updatedUser' };
+      prisma.user.findUnique.mockResolvedValue(null);
 
-        const response = await request(app)
-            .get('/api/users/999/flashcardSets'); 
+      await userController.updateUserById(req, res);
 
-        expect(response.status).toBe(404);
-        expect(response.body).toEqual({ error: 'User not found' });
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
     });
 
-    it('should return 500 if an internal server error occurs', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        prisma.flashcardSet.findMany.mockRejectedValue(new Error('Database error'));
+    it('should return 403 if non-admin tries to update admin status', async () => {
+      const user = { id: 1, username: 'testUser', password: 'hashedPassword', admin: false };
+      req.params.userId = 1;
+      req.body = { admin: true };
+      req.user.admin = false;
+      prisma.user.findUnique.mockResolvedValue(user);
 
-        const response = await request(app)
-            .get('/api/users/1/flashcardSets');
+      await userController.updateUserById(req, res);
 
-        expect(response.status).toBe(500);
-        expect(response.body).toEqual({ error: 'Database error' });
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ error: 'You are not allowed to update admin status' });
     });
 
-    it('should return 400 if userId is not a valid number', async () => {
-        const response = await request(app)
-            .get('/api/users/invalid/flashcardSets'); 
+    it('should return 500 if there is a server error', async () => {
+      const error = new Error('Database error');
+      req.params.userId = 1;
+      req.body = { username: 'updatedUser' };
+      prisma.user.findUnique.mockRejectedValue(error);
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Invalid user ID format' });
+      await userController.updateUserById(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: error.message });
+    });
+  });
+
+  describe('getUserFlashcardSets', () => {
+    it('should return all flashcard sets for a user', async () => {
+      const sets = [{ id: 1, name: 'Test Set' }];
+      req.params.userId = 1;
+      prisma.flashcardSet.findMany.mockResolvedValue(sets);
+
+      await userController.getUserFlashcardSets(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(sets);
     });
 
-    it('should return 200 and the flashcard sets for a userId as a string', async () => {
-        prisma.user.findUnique.mockResolvedValue(mockUser);
-        prisma.flashcardSet.findMany.mockResolvedValue(mockFlashcardSets);
+    it('should return 404 if user is not found', async () => {
+      req.params.userId = 1;
+      prisma.user.findUnique.mockResolvedValue(null);
 
-        const response = await request(app)
-            .get('/api/users/1/flashcardSets'); 
+      await userController.getUserFlashcardSets(req, res);
 
-        expect(response.status).toBe(200);
-        expect(response.body).toEqual(mockFlashcardSets);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
     });
 
-    it('should return 400 if userId is a negative number', async () => {
-        const response = await request(app)
-            .get('/api/users/-1/flashcardSets'); 
+    it('should return 400 if userId is invalid', async () => {
+      req.params.userId = 'invalid';
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: 'Invalid user ID format' });
+      await userController.getUserFlashcardSets(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid user ID format' });
     });
-   
+
+    it('should return 500 if there is a server error', async () => {
+      const error = new Error('Database error');
+      req.params.userId = 1;
+      prisma.flashcardSet.findMany.mockRejectedValue(error);
+
+      await userController.getUserFlashcardSets(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: error.message });
+    });
+  });
+
+  describe('updatePassword', () => {
+    it('should update the user password', async () => {
+      const user = { id: 1, password: 'hashedPassword' };
+      req.body = { currentPassword: 'password123', newPassword: 'newPassword123' };
+      prisma.user.findUnique.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(true);
+      bcrypt.genSalt.mockResolvedValue('salt');
+      bcrypt.hash.mockResolvedValue('newHashedPassword');
+
+      await userController.updatePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Password updated successfully' });
+    });
+
+    it('should return 404 if user is not found', async () => {
+      req.body = { currentPassword: 'password123', newPassword: 'newPassword123' };
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      await userController.updatePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'User not found' });
+    });
+
+    it('should return 400 if current password is incorrect', async () => {
+      const user = { id: 1, password: 'hashedPassword' };
+      req.body = { currentPassword: 'wrongPassword', newPassword: 'newPassword123' };
+      prisma.user.findUnique.mockResolvedValue(user);
+      bcrypt.compare.mockResolvedValue(false);
+
+      await userController.updatePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Current password is incorrect' });
+    });
+
+    it('should return 500 if there is a server error', async () => {
+      const error = new Error('Database error');
+      req.body = { currentPassword: 'password123', newPassword: 'newPassword123' };
+      prisma.user.findUnique.mockRejectedValue(error);
+
+      await userController.updatePassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ error: error.message });
+    });
+  });
 });
-

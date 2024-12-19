@@ -1,49 +1,63 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// Allows users to sign in to their account.
 export default function SignIn({ setToken }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false); 
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // Checks to see if username and password has been entered in the form
-    // If not, user is alerted
-    if (!username || !password) {
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedUsername || !trimmedPassword) {
       alert('Username and password are required');
       return;
     }
 
-    // Calling the API for login from usercontroller
-    const response = await fetch('http://localhost:3000/api/users/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await response.json();
-    console.log('Response from API:', JSON.stringify(data, null, 2));
+    setLoading(true); 
 
-    if (response.ok) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setToken(data.token);
+    try {
+      const response = await fetch('http://localhost:3000/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: trimmedUsername, password: trimmedPassword }),
+      });
 
-      if (data.user.admin == true) {
-        alert('Login successful!');
-        navigate('/AdminDashboard');
+      const data = await response.json();
+      console.log('API Response Status:', response.status);
+      console.log('API Response Data:', data);
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        setToken(data.token);
+
+        const decodedToken = JSON.parse(atob(data.token.split('.')[1]));
+        const isAdmin = decodedToken.admin;
+
+        if (isAdmin) {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/my-flashcards');
+        }
       } else {
-        alert('Login successful!');
-        navigate('/my-flashcards');
+        alert(`Error: ${data.error}`);
       }
-    } else {
-      alert(`Error: ${data.error}`);
+    } catch (error) {
+      console.error('Login Error:', error);
+      alert('An unexpected error occurred. Please try again later.');
+    } finally {
+      setLoading(false); 
     }
   };
 
+  // Tailwind CSS for the sign in form.
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
@@ -53,9 +67,18 @@ export default function SignIn({ setToken }) {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form action="#" method="POST" className="space-y-6" onSubmit={handleLogin}>
+        <form
+          action="#"
+          method="POST"
+          className="space-y-6"
+          onSubmit={handleLogin}
+        >
+          {/* Username Field */}
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-900">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-900"
+            >
               Username
             </label>
             <div className="mt-2">
@@ -65,20 +88,29 @@ export default function SignIn({ setToken }) {
                 type="text"
                 required
                 autoComplete="username"
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm 
+                           ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 
+                           focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
           </div>
 
+          {/* Password Field */}
           <div>
             <div className="flex items-center justify-between">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-900">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-900"
+              >
                 Password
               </label>
               <div className="text-sm">
-                <a href="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-500">
+                <a
+                  href="/forgot-password"
+                  className="font-semibold text-indigo-600 hover:text-indigo-500"
+                >
                   Forgot password?
                 </a>
               </div>
@@ -90,26 +122,34 @@ export default function SignIn({ setToken }) {
                 type="password"
                 required
                 autoComplete="current-password"
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm 
+                           ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 
+                           focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
           </div>
 
+          {/* Submit Button */}
           <div>
             <button
               type="submit"
-              className="w-full py-2 px-4 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              disabled={loading} 
+              className={`w-full py-2 px-4 bg-indigo-600 text-white rounded hover:bg-indigo-700 
+                          ${loading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
             >
-              Sign in
+              {loading ? 'Logging in...' : 'Sign in'} 
             </button>
           </div>
         </form>
 
         <p className="mt-10 text-center text-sm text-gray-500">
           Don't have an account?{' '}
-          <a href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-500">
+          <a
+            href="/signup"
+            className="font-semibold text-indigo-600 hover:text-indigo-500"
+          >
             Sign up here
           </a>
         </p>

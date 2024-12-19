@@ -13,50 +13,131 @@ import Settings from './pages/Settings';
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(null); 
+  const [username, setUsername] = useState('User');
+  const [loading, setLoading] = useState(true);
 
-  // Check for existing token and admin status
+  const decodeToken = (storedToken) => {
+    try {
+      const decoded = JSON.parse(atob(storedToken.split('.')[1]));
+      console.log('Decoded Token:', decoded); // Debugging line
+      setIsAdmin(decoded.admin);
+      setUsername(decoded.username || 'User');
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      setIsAdmin(false);
+      setUsername('User');
+    }
+  };
+
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
-      setToken(storedToken); 
-      try {
-        const decoded = JSON.parse(atob(storedToken.split('.')[1]));
-        setIsAdmin(decoded.admin);
-      } catch (error) {
-        console.error("Error decoding token: ", error);
-      }
+      setToken(storedToken);
+      decodeToken(storedToken);
+    } else {
+      setIsAdmin(false);
+      setUsername('User');
     }
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      decodeToken(token);
+    } else {
+      setIsAdmin(false);
+      setUsername('User');
+    }
+  }, [token]);
 
   // Logout function
   const handleLogout = () => {
-    console.log('Logout function called'); // Debugging
-    localStorage.removeItem('token');  
-    setToken(null);  
-    setIsAdmin(false); 
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setIsAdmin(false);
+    setUsername('User');
   };
+
+  if (loading || isAdmin === null) {
+    return <div>Loading...</div>; 
+  }
 
   return (
     <Router>
-      <Navigation username="user" onLogout={handleLogout} />
+      <Navigation username={username} onLogout={handleLogout} isAdmin={isAdmin} />
       <div className="p-4">
         <Routes>
           {/* Route for Home page */}
-          <Route path="/" element={token ? <Home /> : <SignIn setToken={setToken} />} />
-         
-          {/* Routes for Flashcards and other pages, only accessible if logged in */}
-          <Route path="/create" element={token ? <CreateFlashcards /> : <SignIn setToken={setToken} />} />
-          <Route path="/my-flashcards" element={token ? <MyFlashcards /> : <SignIn setToken={setToken} />} />
-          <Route path="/Collection" element={token ? <Collectionpage /> : <SignIn setToken={setToken} />} />
-          <Route path="/Flashcard" element={token ? <Flashcard set={{ id: 1, name: 'Test Set' }} onBack={() => {}} /> : <SignIn setToken={setToken} />} />
-          <Route path="/Settings" element={token ? <Settings /> : <SignIn setToken={setToken} />} />
-         
-          {/* Admin Dashboard only accessible if the user is an admin */}
-          <Route path="/AdminDashboard" element={token && isAdmin ? <AdminDashboard /> : <Navigate to="/AdminDashboard" />} />
-          
+          <Route 
+            path="/" 
+            element={
+              token ? 
+                <Navigate to={isAdmin ? "/admin-dashboard" : "/my-flashcards"} replace /> 
+                : 
+                <Home /> 
+            } 
+          />
+
+          {/* Route for SignIn page */}
+          <Route 
+            path="/signin" 
+            element={
+              token ? 
+                <Navigate to={isAdmin ? "/admin-dashboard" : "/my-flashcards"} replace /> 
+                : 
+                <SignIn setToken={setToken} /> 
+            } 
+          />
+
           {/* Route for SignUp page */}
           <Route path="/signup" element={<SignUp />} />
+
+          {/* Protected Routes */}
+          <Route 
+            path="/create" 
+            element={
+              token ? <CreateFlashcards /> : <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/my-flashcards" 
+            element={
+              token ? <MyFlashcards /> : <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/collection" 
+            element={
+              token ? <Collectionpage /> : <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/flashcard" 
+            element={
+              token ? <Flashcard set={{ id: 1, name: 'Test Set' }} onBack={() => {}} /> 
+                    : 
+              <Navigate to="/signin" replace />
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              token ? <Settings /> : <Navigate to="/signin" replace />
+            } 
+          />
+
+          {/* Admin Dashboard only accessible if the user is an admin */}
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              token && isAdmin ? <AdminDashboard /> : <Navigate to="/" replace />
+            } 
+          />
+
+          {/* Catch-all Route for Undefined Paths */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>

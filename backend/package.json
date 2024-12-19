@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "cy:open": "cypress open"
   },
   "keywords": [],
   "author": "",
@@ -11,7 +12,7 @@
   "description": "",
   "dependencies": {
     "3": "^2.1.0",
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.1.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -25,6 +26,7 @@
     "@babel/preset-env": "^7.26.0",
     "@jest-mock/express": "^2.1.0",
     "babel-jest": "^29.7.0",
+    "cypress": "^13.17.0",
     "jest": "^29.7.0",
     "jest-mock-extended": "^3.0.0",
     "nodemon": "^3.1.7",
