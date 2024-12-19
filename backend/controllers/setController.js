@@ -148,8 +148,6 @@ const updateFlashcardSet = async (req, res) => {
 // Delete a flashcard set by ID
 const deleteFlashcardSet = async (req, res) => {
   const { setId } = req.params;
-  console.log('Received ID:', setId);
-
   try {
       const parsedId = parseInt(setId, 10);
 
@@ -171,7 +169,6 @@ const deleteFlashcardSet = async (req, res) => {
           where: { id: parsedId },
       });
 
-      console.log(`Flashcard set deleted successfully with ID: ${parsedId}`);
       res.status(204).send();
   } catch (error) {
       console.error(`Error deleting flashcard set with ID ${parsedId}:`, error);

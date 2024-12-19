@@ -10,78 +10,15 @@ const AdminDashboard = () => {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadingLimit, setLoadingLimit] = useState(true);
   const [updatingLimit, setUpdatingLimit] = useState(false);
+  const [deletingUserIds, setDeletingUserIds] = useState([]);
 
   // Fetches all the users in the database
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const token = localStorage.getItem('token');
-
-      try {
-        const response = await fetch('http://localhost:3000/api/admins/', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setUsers(data);
-        } else {
-          alert(data.error || 'Error fetching users');
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        alert('An unexpected error occurred while fetching users.');
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
-
-  // Fetches the set limit for flashcard sets created per day
-  useEffect(() => {
-    const fetchSetLimit = async () => {
-      const token = localStorage.getItem('token');
-
-      try {
-        const response = await fetch('http://localhost:3000/api/admins/set-limit', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setSetLimit(data.dailyLimit);
-        } else {
-          alert(data.error || 'Error fetching set limit');
-        }
-      } catch (error) {
-        console.error('Error fetching set limit:', error);
-        alert('An unexpected error occurred while fetching set limit.');
-      } finally {
-        setLoadingLimit(false);
-      }
-    };
-
-    fetchSetLimit();
-  }, []);
-
-  // Admin can delete a user
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return; // Confirmation prompt
-
+  const fetchUsers = async () => {
     const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch(`http://localhost:3000/api/admins/delete/${userId}`, {
-        method: 'DELETE',
+      const response = await fetch('http://localhost:3000/api/admins/', {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -90,14 +27,87 @@ const AdminDashboard = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setUsers(users.filter((user) => user.id !== userId));
-        alert('User deleted successfully.');
+        setUsers(data);
       } else {
-        alert(data.error || 'Error deleting user');
+        alert(data.error || 'Error fetching users');
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      alert('An unexpected error occurred while fetching users.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Fetches the set limit for flashcard sets created per day
+  const fetchSetLimit = async () => {
+    const token = localStorage.getItem('token');
+
+    try {
+      const response = await fetch('http://localhost:3000/api/admins/set-limit', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSetLimit(data.dailyLimit);
+      } else {
+        alert(data.error || 'Error fetching set limit');
+      }
+    } catch (error) {
+      console.error('Error fetching set limit:', error);
+      alert('An unexpected error occurred while fetching set limit.');
+    } finally {
+      setLoadingLimit(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+ 
+  useEffect(() => {
+    fetchSetLimit(); 
+  }, []);
+
+  // Admin can delete a user
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return; 
+
+    setDeletingUserIds((prev) => [...prev, userId]); 
+
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:3000/api/admins/delete/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 204) {
+
+        alert('User deleted successfully.');
+        fetchUsers(); 
+      } else {
+        const data = await response.json();
+        if (response.ok) {
+          alert('User deleted successfully.');
+          fetchUsers(); 
+        } else {
+          alert(data.error || 'Error deleting user');
+        }
       }
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('An unexpected error occurred while deleting the user.');
+    } finally {
+      setDeletingUserIds((prev) => prev.filter((id) => id !== userId)); 
     }
   };
 
@@ -197,14 +207,18 @@ const AdminDashboard = () => {
                   <div>
                     <p className="text-lg font-medium text-gray-900">{user.username}</p>
                     <p className="text-sm text-gray-500">ID: {user.id}</p>
-               
                   </div>
                   <button
                     onClick={() => handleDeleteUser(user.id)}
-                    className="flex items-center px-3 py-2 bg-red-200 text-red-700 rounded hover:bg-red-300 transition"
+                    disabled={deletingUserIds.includes(user.id)} // Disable button if deleting
+                    className={`flex items-center px-3 py-2 rounded ${
+                      deletingUserIds.includes(user.id)
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-red-200 hover:bg-red-300'
+                    } text-red-700 transition`}
                   >
                     <TrashIcon className="h-5 w-5 mr-1" aria-hidden="true" />
-                    Delete
+                    {deletingUserIds.includes(user.id) ? 'Deleting...' : 'Delete'}
                   </button>
                 </li>
               ))
